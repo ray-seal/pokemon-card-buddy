@@ -189,12 +189,13 @@ async function editSlot(index) {
   if (!action || action.trim() === '4') return;
   const choice = ({ '1': 'PHOTO', '2': 'WANTED', '3': 'REMOVE' })[action.trim()] || action.toUpperCase();
   if (choice === 'REMOVE') {
-    binder.pages[pageIndex].slots[index] = null;
+    await removeSlot(index); return;
   } else if (choice === 'WANTED') {
     const name = window.prompt('Wanted Pokémon or card name:', existing?.name || '');
     if (!name?.trim()) return;
     const number = window.prompt('Optional Pokédex number (leave blank if not relevant):', existing?.number || '');
-    binder.pages[pageIndex].slots[index] = { type: 'wanted', collectionItemId: existing?.collectionItemId || uid(), name: name.trim().slice(0, 80), number: number?.trim() || '' };\n    syncItem(binder, binder.pages[pageIndex].slots[index]);
+    binder.pages[pageIndex].slots[index] = { type: 'wanted', collectionItemId: existing?.collectionItemId || uid(), name: name.trim().slice(0, 80), number: number?.trim() || '' };
+    syncItem(binder, binder.pages[pageIndex].slots[index]);
   } else if (choice === 'PHOTO') {
     const input = $('binderPhotoInput');
     input.value = '';
@@ -203,7 +204,8 @@ async function editSlot(index) {
       try {
         const data = await compressImage(file);
         const name = window.prompt('Optional card name:', existing?.name || file.name.replace(/\.[^.]+$/, '')) ?? '';
-        binder.pages[pageIndex].slots[index] = { type: 'card', collectionItemId: existing?.collectionItemId || uid(), data, name: name.slice(0, 80) };\n        syncItem(binder, binder.pages[pageIndex].slots[index]);
+        binder.pages[pageIndex].slots[index] = { type: 'card', collectionItemId: existing?.collectionItemId || uid(), data, name: name.slice(0, 80) };
+        syncItem(binder, binder.pages[pageIndex].slots[index]);
         await saveBinder(binder); render();
       } catch { window.alert('That photo could not be loaded. Please try another image.'); }
     };
