@@ -1,5 +1,5 @@
 import { POKEMON, REGIONS } from './data/pokemon.js';
-import { loadProfiles, createProfile, switchProfile, loadProfileCollection, saveProfileCollection } from './storage.js';
+import { loadProfiles, createProfile, switchProfile, loadProfileCollection, saveProfileCollection, renameProfile, deleteProfile } from './storage.js';
 import { getStatus, setFlag, getStats } from './collection.js';
 import { applyView, FILTERS, SORTS } from './filter.js';
 
@@ -115,6 +115,25 @@ profileSel.addEventListener('change', () => {
   renderStats();
   renderList();
 });
+$('renameProfile').addEventListener('click', () => {
+  const current = profiles.profiles[profiles.activeId];
+  const name = window.prompt('Rename this collection:', current.name);
+  if (name === null || !name.trim()) return;
+  profiles = renameProfile(profiles, profiles.activeId, name);
+  renderProfiles(); renderStats();
+});
+$('deleteProfile').addEventListener('click', () => {
+  const current = profiles.profiles[profiles.activeId];
+  if (Object.keys(profiles.profiles).length <= 1) {
+    window.alert('Keep at least one collection. You can rename this one instead.');
+    return;
+  }
+  if (!window.confirm(`Remove “${current.name}” and its saved Pokémon checklist? This cannot be undone. Other collections will be kept.`)) return;
+  const oldId = profiles.activeId;
+  profiles = deleteProfile(profiles, oldId);
+  collection = loadProfileCollection(profiles.activeId);
+  renderProfiles(); renderStats(); renderList();
+});
 $('newProfile').addEventListener('click', () => {
   const name = window.prompt('Name for the new collection:');
   if (name === null) return;
@@ -135,3 +154,17 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
   });
 }
+
+
+const collectionSection = document.getElementById('collectionSection');
+const binderSection = document.getElementById('binderSection');
+document.getElementById('showCollection').addEventListener('click', () => {
+  collectionSection.hidden = false; binderSection.hidden = true;
+  document.getElementById('showCollection').classList.add('active');
+  document.getElementById('showBinder').classList.remove('active');
+});
+document.getElementById('showBinder').addEventListener('click', () => {
+  collectionSection.hidden = true; binderSection.hidden = false;
+  document.getElementById('showBinder').classList.add('active');
+  document.getElementById('showCollection').classList.remove('active');
+});
