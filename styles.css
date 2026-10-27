@@ -78,3 +78,12 @@ main { max-width:50rem; margin:0 auto; padding:0 1rem 2rem; }
 .slot-remove:active { transform:scale(.92); }
 html { scroll-padding-top: .5rem; }
 body { overflow-anchor: none; }
+
+.binder-book { position:relative; }
+.binder-drop-edge { display:none; position:absolute; z-index:5; top:.5rem; bottom:.5rem; width:2.6rem; align-items:center; justify-content:center; flex-direction:column; gap:.25rem; border:1px dashed #dbeafe; border-radius:.5rem; background:#1d4ed8e8; color:white; font-size:1.8rem; font-weight:700; }
+.binder-drop-edge span { font-size:.65rem; font-weight:600; writing-mode:vertical-rl; }
+.binder-book.is-dragging .binder-drop-edge { display:flex; }
+.binder-drop-edge.edge-left { left:.45rem; }
+.binder-drop-edge.edge-right { right:.45rem; }
+.binder-drop-edge.edge-active { background:#15803d; box-shadow:0 0 0 3px #bbf7d0; }
+@media (max-width:36rem) { .binder-drop-edge { width:2rem; } }
