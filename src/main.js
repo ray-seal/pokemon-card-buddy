@@ -137,6 +137,7 @@ $('deleteProfile').addEventListener('click', () => {
   profiles = deleteProfile(profiles, oldId);
   collection = loadProfileCollection(profiles.activeId);
   renderProfiles(); renderStats(); renderList();
+  refreshSyncAvailability();
 });
 $('newProfile').addEventListener('click', () => {
   const name = window.prompt('Name for the new collection:');
