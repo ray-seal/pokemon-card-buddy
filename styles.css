@@ -219,3 +219,40 @@ main { max-width:54rem; margin:0 auto; padding:0 1rem 2rem; }
   .slot-caption { font-size:.55rem !important; }
   .binder-drop-edge { width:2rem; }
 }
+
+
+/* Account and cloud sync controls */
+.account-panel {
+  margin: 0.75rem auto;
+  width: min(100% - 1.25rem, 980px);
+  padding: 0.85rem;
+  border: 1px solid rgba(129, 140, 248, 0.28);
+  border-radius: 14px;
+  background: rgba(13, 19, 34, 0.96);
+}
+.account-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.55rem;
+}
+.account-fields label {
+  display: grid;
+  gap: 0.25rem;
+  flex: 1 1 180px;
+  min-width: 0;
+  color: var(--muted, #aab4ca);
+  font-size: 0.85rem;
+}
+.account-fields input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.65rem 0.7rem;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 9px;
+  color: inherit;
+  background: #080d19;
+}
+.account-fields button { min-height: 42px; }
+.account-panel .note { margin: 0.6rem 0 0; overflow-wrap: anywhere; }
