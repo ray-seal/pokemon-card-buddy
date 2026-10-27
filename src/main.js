@@ -182,11 +182,14 @@ async function accountAction(action) {
   accountStatus.textContent = 'Connecting securely…';
   try {
     const result = await action(email, password);
-    const user = result?.user || result?.session?.user || await currentUser();
+    const needsConfirmation = action === signUp && result?.user && !result?.session;
+    const user = needsConfirmation ? null : (result?.session?.user || await currentUser());
     showAccount(user);
-    accountStatus.textContent = result?.user && !result?.session
-      ? 'Account created. Check your email for a confirmation link, then sign in.'
-      : `Signed in as ${user?.email || email}.`;
+    accountStatus.textContent = needsConfirmation
+      ? 'Account created. Check your email and open the confirmation link. Once confirmed, return here and sign in if needed.'
+      : user
+        ? `Signed in as ${user.email || email}.`
+        : 'No active session was created. Check your email confirmation, then sign in.';
   } catch (error) {
     accountStatus.textContent = error?.message || 'Account request failed. Please try again.';
   } finally {
