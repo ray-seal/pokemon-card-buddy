@@ -94,3 +94,26 @@ export const loadProfileCollection = (id, storage = globalThis.localStorage) =>
   loadCollection(storage, collectionKey(id));
 export const saveProfileCollection = (id, collection, storage = globalThis.localStorage) =>
   saveCollection(collection, storage, collectionKey(id));
+
+
+// Rename or remove one profile without touching any other saved collection.
+export function renameProfile(meta, id, name, storage = globalThis.localStorage) {
+  if (!meta.profiles[id]) return meta;
+  const clean = String(name || '').trim().slice(0, 40);
+  if (!clean) return meta;
+  const next = { ...meta, profiles: { ...meta.profiles, [id]: { ...meta.profiles[id], name: clean } } };
+  saveProfiles(next, storage);
+  return next;
+}
+
+export function deleteProfile(meta, id, storage = globalThis.localStorage) {
+  if (!meta.profiles[id] || Object.keys(meta.profiles).length <= 1) return meta;
+  const profiles = { ...meta.profiles };
+  delete profiles[id];
+  // Only the explicitly selected profile's collection is removed. Other collections and the legacy key remain untouched.
+  try { storage.removeItem(collectionKey(id)); } catch { return meta; }
+  const activeId = meta.activeId === id ? Object.keys(profiles)[0] : meta.activeId;
+  const next = { ...meta, activeId, profiles };
+  saveProfiles(next, storage);
+  return next;
+}

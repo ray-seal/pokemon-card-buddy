@@ -3,24 +3,28 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#1d4ed8">
+  <meta name="theme-color" content="#080b14">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Pokémon Tracker">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Pokémon Card Buddy">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-  <title>Pokémon Collection Tracker</title>
+  <title>Pokémon Card Buddy</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <header class="top">
-    <h1>Pokémon Tracker</h1>
+    <h1>Pokémon Card Buddy</h1>
     <div class="profilebar">
       <label>Collection <select id="profile"></select></label>
       <button id="newProfile" type="button">New</button>
+      <button id="renameProfile" type="button">Rename</button>
+      <button id="deleteProfile" type="button">Remove</button>
     </div>
+  </header>
+  <section class="browse-controls" aria-label="Pokédex filters">
     <p id="scope" class="scope"></p>
     <div class="progress">
       <strong id="count"></strong>
@@ -38,12 +42,33 @@
       <label>Show <select id="filter"></select></label>
       <label>Sort <select id="sort"></select></label>
     </div>
-  </header>
+  </section>
+  <nav class="app-tabs" aria-label="App sections"><button id="showCollection" class="active" type="button">Pokédex</button><button id="showBinder" type="button">Virtual Binder</button></nav>
+  <section id="collectionSection">
   <main>
     <ul id="list" class="list"></ul>
     <p id="empty" class="empty" hidden>No Pokémon found</p>
     <p class="note">Collections are stored on this device only and do not sync across devices. Each person sharing this browser should pick their own collection.</p>
   </main>
+  </section>
+  <section id="binderSection" hidden>
+    <div class="binder-toolbar">
+      <div><h2 id="binderName">My Binder</h2><p id="binderPageCount">Page 1 of 1</p></div>
+      <label>Binder <select id="binderSelect"></select></label>
+      <button id="newBinder" type="button">New binder</button><button id="renameBinder" type="button">Rename</button><button id="removeBinder" type="button">Delete binder</button>
+    </div>
+    <p id="binderStatus" class="note">Photos are saved locally on this device. Back up your device data to avoid losing them.</p>
+    <div id="binderBook" class="binder-book">
+      <div class="binder-drop-edge edge-left" data-direction="prev" aria-label="Drag here to turn to previous page">‹<span>Previous</span></div>
+      <button id="prevBinderPage" class="page-nav" type="button" aria-label="Previous page">‹</button>
+      <div id="binderPages" class="binder-pages" aria-label="Nine pocket binder page"></div>
+      <button id="nextBinderPage" class="page-nav" type="button" aria-label="Next page">›</button>
+      <div class="binder-drop-edge edge-right" data-direction="next" aria-label="Drag here to turn to next page">›<span>Next</span></div>
+    </div>
+    <div class="binder-page-controls"><button id="addBinderPage" type="button">＋ Add page</button><button id="deleteBinderPage" type="button">Remove current page</button></div>
+    <input id="binderPhotoInput" type="file" accept="image/*" capture="environment" hidden>
+  </section>
   <script type="module" src="src/main.js"></script>
+  <script type="module" src="src/binder.js"></script>
 </body>
 </html>
