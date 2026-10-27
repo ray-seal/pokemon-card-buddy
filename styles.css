@@ -54,10 +54,11 @@ input::placeholder { color: #7183a4; }
   position: sticky;
   top: 0;
   z-index: 30;
+  isolation: isolate;
   max-width: 54rem;
   margin: 0 auto;
   padding: calc(.65rem + env(safe-area-inset-top, 0px)) 1rem .65rem;
-  background: linear-gradient(135deg, #111a2bf7, #0c1220f8);
+  background: #0d1322;
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid #263650;
@@ -77,6 +78,8 @@ h1 {
 }
 .profilebar, .regions { display:flex; gap:.45rem; align-items:center; margin:.25rem 0 0; }
 .browse-controls {
+  position: relative;
+  z-index: 1;
   max-width:54rem; margin:0 auto .8rem; padding:.55rem 1rem .8rem;
   background:linear-gradient(135deg,#111a2beF,#0c1220f2);
   border:1px solid #263650; border-top:0; border-radius:0 0 1.15rem 1.15rem;
