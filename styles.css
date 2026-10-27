@@ -256,3 +256,9 @@ main { max-width:54rem; margin:0 auto; padding:0 1rem 2rem; }
 }
 .account-fields button { min-height: 42px; }
 .account-panel .note { margin: 0.6rem 0 0; overflow-wrap: anywhere; }
+
+.account-summary { display:flex; align-items:center; flex-wrap:wrap; gap:.55rem; }
+.account-summary strong { flex:1 1 10rem; font-size:1.05rem; overflow-wrap:anywhere; }
+.account-panel .account-fields { display:flex; align-items:end; flex-wrap:wrap; gap:.55rem; }
+.account-panel .account-fields label { display:flex; flex:1 1 13rem; flex-direction:column; gap:.3rem; color:var(--muted); }
+.account-panel .account-fields input { width:100%; min-width:0; padding:.7rem; border:1px solid var(--line); border-radius:.7rem; background:#0b1120; color:var(--fg); }
