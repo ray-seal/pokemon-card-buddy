@@ -185,8 +185,9 @@ export async function saveCloudBinder(localBinder) {
     local_id: String(localBinder.id),
     name: binder.name,
     pages: binder.pages,
+    collection_items: binder.collectionItems || [],
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id,local_id' }).select('id,local_id,name,pages,updated_at').single();
+  }, { onConflict: 'user_id,local_id' }).select('id,local_id,name,pages,collection_items,updated_at').single();
   if (error) throw error;
   return { ...binder, cloudId: data.id, updatedAt: data.updated_at };
 }
@@ -196,12 +197,12 @@ export async function loadCloudBinders() {
   const user = await currentUser();
   if (!user) return [];
   const { data, error } = await client.from('binders')
-    .select('id,local_id,name,pages,updated_at')
+    .select('id,local_id,name,pages,collection_items,updated_at')
     .eq('user_id', user.id)
     .order('updated_at', { ascending: true });
   if (error) throw error;
   return Promise.all((data || []).map(async (row) => {
-    const binder = { id: row.local_id || row.id, cloudId: row.id, name: row.name, pages: row.pages || [], updatedAt: row.updated_at, collectionItems: [] };
+    const binder = { id: row.local_id || row.id, cloudId: row.id, name: row.name, pages: row.pages || [], updatedAt: row.updated_at, collectionItems: row.collection_items || [] };
     for (const page of binder.pages) for (const slot of page.slots || []) {
       if (slot?.type === 'card' && slot.photoPath) {
         try {
