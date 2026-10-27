@@ -25,15 +25,18 @@
     </div>
   </header>
   <section class="account-panel" aria-label="Account and cloud sync">
-    <div class="account-fields">
+    <div id="accountFields" class="account-fields">
       <label>Email <input id="accountEmail" type="email" autocomplete="email" placeholder="you@example.com"></label>
       <label>Password <input id="accountPassword" type="password" autocomplete="current-password" minlength="8" placeholder="At least 8 characters"></label>
       <button id="signIn" type="button">Sign in</button>
       <button id="signUp" type="button">Create account</button>
-      <button id="signOut" type="button" hidden>Sign out</button>
-      <button id="syncCloud" type="button" disabled>Sync collection</button>
     </div>
-    <p id="accountStatus" class="note" role="status">Your collection stays on this device until you sign in and choose Sync collection.</p>
+    <div id="accountSummary" class="account-summary" hidden>
+      <strong id="accountUsername">Loading username…</strong>
+      <button id="syncCloud" type="button" disabled>Sync data</button>
+      <button id="signOut" type="button">Sign out</button>
+    </div>
+    <p id="accountStatus" class="note" role="status">Your collection stays on this device until you sign in and choose Sync data.</p>
   </section>
   <section class="browse-controls" aria-label="Pokédex filters">
     <p id="scope" class="scope"></p>
