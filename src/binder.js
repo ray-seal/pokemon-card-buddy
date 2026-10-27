@@ -145,7 +145,7 @@ async function removeSlot(index) {
     if (!targetPage) { targetPage = newPage(); destination.pages.push(targetPage); }
     targetPage.slots[targetPage.slots.findIndex((entry) => !entry)] = movedSlot;
     binder.pages[pageIndex].slots[index] = null;
-    await saveBinder(binder); await saveBinder(destination);
+    await saveBinder(destination); await saveBinder(binder);
     activeId = destination.id;
     pageIndex = destination.pages.indexOf(targetPage);
   } else { window.alert('Please enter 1, 2, 3 or 4.'); return; }
