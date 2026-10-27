@@ -50,6 +50,47 @@ export async function signOut() {
   if (error) throw error;
 }
 
+function normalizedChecklist(value) {
+  const normalized = {};
+  for (const [id, flags] of Object.entries(value || {})) {
+    const owned = Boolean(flags?.owned);
+    const wanted = Boolean(flags?.wanted);
+    if (owned || wanted) normalized[id] = { owned, wanted };
+  }
+  return normalized;
+}
+
+function sameChecklist(a, b) {
+  const left = normalizedChecklist(a);
+  const right = normalizedChecklist(b);
+  const leftKeys = Object.keys(left).sort();
+  const rightKeys = Object.keys(right).sort();
+  return leftKeys.length === rightKeys.length
+    && leftKeys.every((key, index) => key === rightKeys[index]
+      && left[key].owned === right[key].owned
+      && left[key].wanted === right[key].wanted);
+}
+
+export async function inspectCollectionSync(name, localCollection) {
+  const client = await getClient();
+  const user = await currentUser();
+  if (!user) throw new Error('Please sign in first.');
+  const { data: rows, error } = await client
+    .from('user_collections')
+    .select('id,name,collection_data,updated_at')
+    .eq('user_id', user.id)
+    .eq('name', name)
+    .order('updated_at', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  const remote = rows?.[0] || null;
+  return {
+    exists: Boolean(remote),
+    needsSync: !remote || !sameChecklist(localCollection, remote.collection_data),
+    remoteUpdatedAt: remote?.updated_at || null,
+  };
+}
+
 export async function syncCollection(name, localCollection) {
   const client = await getClient();
   const user = await currentUser();

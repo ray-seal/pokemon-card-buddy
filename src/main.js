@@ -2,7 +2,7 @@ import { POKEMON, REGIONS } from './data/pokemon.js';
 import { loadProfiles, createProfile, switchProfile, loadProfileCollection, saveProfileCollection, renameProfile, deleteProfile } from './storage.js';
 import { getStatus, setFlag, getStats } from './collection.js';
 import { applyView, FILTERS, SORTS } from './filter.js';
-import { signIn, signUp, signOut, currentUser, syncCollection, watchAuth, getUsername, saveUsername } from './cloud.js';
+import { signIn, signUp, signOut, currentUser, syncCollection, inspectCollectionSync, watchAuth, getUsername, saveUsername } from './cloud.js';
 
 const activePokemon = POKEMON;
 let profiles = loadProfiles();
@@ -83,6 +83,7 @@ function check(p, flag, label) {
     saveProfileCollection(profiles.activeId, collection);
     renderStats();
     renderList();
+    refreshSyncAvailability();
   });
   const text = document.createElement('span');
   text.textContent = label;
@@ -115,6 +116,7 @@ profileSel.addEventListener('change', () => {
   collection = loadProfileCollection(profiles.activeId);
   renderStats();
   renderList();
+  refreshSyncAvailability();
 });
 $('renameProfile').addEventListener('click', () => {
   const current = profiles.profiles[profiles.activeId];
@@ -122,6 +124,7 @@ $('renameProfile').addEventListener('click', () => {
   if (name === null || !name.trim()) return;
   profiles = renameProfile(profiles, profiles.activeId, name);
   renderProfiles(); renderStats();
+  refreshSyncAvailability();
 });
 $('deleteProfile').addEventListener('click', () => {
   const current = profiles.profiles[profiles.activeId];
@@ -134,6 +137,7 @@ $('deleteProfile').addEventListener('click', () => {
   profiles = deleteProfile(profiles, oldId);
   collection = loadProfileCollection(profiles.activeId);
   renderProfiles(); renderStats(); renderList();
+  refreshSyncAvailability();
 });
 $('newProfile').addEventListener('click', () => {
   const name = window.prompt('Name for the new collection:');
@@ -143,6 +147,7 @@ $('newProfile').addEventListener('click', () => {
   renderProfiles();
   renderStats();
   renderList();
+  refreshSyncAvailability();
 });
 sortSel.addEventListener('change', () => { view.sort = sortSel.value; renderList(); });
 
@@ -167,6 +172,7 @@ function showAccount(user) {
   const signedIn = Boolean(user);
   accountFields.hidden = signedIn;
   accountSummary.hidden = !signedIn;
+  syncButton.hidden = true;
   syncButton.disabled = !signedIn;
   if (!signedIn) {
     activeUserId = null;
@@ -175,11 +181,12 @@ function showAccount(user) {
   } else {
     activeUserId = user.id;
     accountUsername.textContent = 'Loading username…';
-    accountStatus.textContent = 'Signed in. Your Pokédex checklist stays local until you choose Sync data.';
+    accountStatus.textContent = 'Checking whether your Pokédex checklist needs syncing…';
     loadAccountUsername(user).catch((error) => {
       accountUsername.textContent = user.email || 'Account';
       accountStatus.textContent = error?.message || 'Could not load username.';
     });
+    refreshSyncAvailability();
   }
 }
 
@@ -212,6 +219,30 @@ async function loadAccountUsername(user) {
     }
   } finally {
     usernamePromptFor = null;
+  }
+}
+
+let syncCheckSequence = 0;
+async function refreshSyncAvailability() {
+  const sequence = ++syncCheckSequence;
+  const userId = activeUserId;
+  if (!userId) { syncButton.hidden = true; return; }
+  syncButton.hidden = true;
+  try {
+    const status = await inspectCollectionSync(profiles.profiles[profiles.activeId].name, collection);
+    if (sequence !== syncCheckSequence || activeUserId !== userId) return;
+    syncButton.hidden = !status.needsSync;
+    if (status.needsSync) {
+      accountStatus.textContent = status.exists
+        ? 'Your local Pokédex checklist differs from the cloud copy. Sync is available.'
+        : 'This collection has not been backed up to your account yet.';
+    } else {
+      accountStatus.textContent = 'Pokédex checklist is up to date. Binder photos and card inventory are not synced yet.';
+    }
+  } catch (error) {
+    if (sequence !== syncCheckSequence || activeUserId !== userId) return;
+    syncButton.hidden = false;
+    accountStatus.textContent = error?.message || 'Could not check cloud status. You can try syncing.';
   }
 }
 
@@ -260,6 +291,7 @@ syncButton.addEventListener('click', async () => {
     accountStatus.textContent = result.direction === 'uploaded'
       ? 'Pokédex checklist backed up. Binder photos and card inventory are not synced yet.'
       : 'Pokédex checklist synced. Binder photos and card inventory are not synced yet.';
+    await refreshSyncAvailability();
   } catch (error) {
     accountStatus.textContent = error?.message || 'Sync failed. Your local data has not been deleted.';
   } finally { syncButton.disabled = false; }
