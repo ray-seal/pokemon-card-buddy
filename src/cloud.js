@@ -27,7 +27,12 @@ export async function currentUser() {
 
 export async function signUp(email, password) {
   const client = await getClient();
-  const { data, error } = await client.auth.signUp({ email, password });
+  const emailRedirectTo = window.location.origin + window.location.pathname;
+  const { data, error } = await client.auth.signUp({
+    email,
+    password,
+    options: { emailRedirectTo },
+  });
   if (error) throw error;
   return data;
 }

@@ -237,7 +237,8 @@ async function init() {
   if (!binders.length) {
     const b = { id: uid(), name: 'My Binder', pages: [newPage()], collectionItems: [] };
     binders.push(b); activeId = b.id; await saveBinder(b);
-  } else activeId = binders[0].id;\n  for (const binder of binders) { ensureInventory(binder); await saveBinder(binder); }
+  } else activeId = binders[0].id;
+  for (const binder of binders) { ensureInventory(binder); await saveBinder(binder); }
   $('newBinder').addEventListener('click', async () => {
     const name = window.prompt('Name this binder:'); if (!name?.trim()) return;
     const b = { id: uid(), name: name.trim().slice(0, 50), pages: [newPage()], collectionItems: [] };
