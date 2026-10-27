@@ -50,29 +50,68 @@ function syncItem(binder, slot) {
   const item = binder.collectionItems.find((entry) => entry.id === value.id);
   if (item) Object.assign(item, value); else binder.collectionItems.push(value);
 }
+function chooseAction(title, message, choices, cancelLabel = 'Cancel') {
+  const dialog = $('binderChoiceDialog');
+  const heading = $('binderChoiceTitle');
+  const description = $('binderChoiceMessage');
+  const options = $('binderChoiceOptions');
+  const cancel = $('binderChoiceCancel');
+  if (!dialog || !heading || !description || !options || !cancel) return Promise.resolve(null);
+  heading.textContent = title;
+  description.textContent = message || '';
+  options.replaceChildren();
+  for (const choice of choices) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'binder-choice-button';
+    button.textContent = choice.label;
+    button.addEventListener('click', () => {
+      dialog.close();
+      dialog.dispatchEvent(new CustomEvent('binder-choice', { detail: choice.value }));
+    }, { once: true });
+    options.append(button);
+  }
+  cancel.textContent = cancelLabel;
+  cancel.onclick = () => dialog.close();
+  return new Promise((resolve) => {
+    const onChoice = (event) => { cleanup(); resolve(event.detail); };
+    const onCancel = () => { cleanup(); resolve(null); };
+    function cleanup() {
+      dialog.removeEventListener('binder-choice', onChoice);
+      dialog.removeEventListener('close', onCancel);
+    }
+    dialog.addEventListener('binder-choice', onChoice, { once: true });
+    dialog.addEventListener('close', onCancel, { once: true });
+    if (typeof dialog.showModal === 'function') dialog.showModal();
+    else { cleanup(); resolve(null); }
+  });
+}
 async function removeSlot(index) {
   const binder = activeBinder();
   const slot = binder?.pages[pageIndex]?.slots[index];
   if (!binder || !slot) return;
-  const choice = window.prompt('Remove this item how?\\n\\n1 = Binder only (keep in collection)\\n2 = Binder and collection\\n3 = Move to another binder\\n4 = Cancel', '1');
-  if (!choice || choice.trim() === '4') return;
-  if (choice.trim() === '1') {
+  const choice = await chooseAction('Remove or move item', 'Choose what should happen to this pocket.', [
+    { value: '1', label: 'Remove from binder only' },
+    { value: '2', label: 'Remove from binder and collection' },
+    { value: '3', label: 'Move to another binder' },
+  ]);
+  if (!choice) return;
+  if (choice === '1') {
     binder.pages[pageIndex].slots[index] = null;
     await saveBinder(binder);
-  } else if (choice.trim() === '2') {
+  } else if (choice === '2') {
     if (!window.confirm('Remove this specific entry from the linked collection too? Other copies will be kept.')) return;
     ensureInventory(binder);
     binder.collectionItems = binder.collectionItems.filter((item) => item.id !== slot.collectionItemId);
     binder.pages[pageIndex].slots[index] = null;
     await saveBinder(binder);
-  } else if (choice.trim() === '3') {
+  } else if (choice === '3') {
     const destinations = binders.filter((item) => item.id !== binder.id);
     if (!destinations.length) { window.alert('Create another binder first, then you can move items between binders.'); return; }
-    const options = destinations.map((item, i) => (i + 1) + ' = ' + item.name).join('\\n');
-    const answer = window.prompt('Move to which binder?\\n\\n' + options + '\\n\\nEnter a number:');
-    if (answer === null || !answer.trim()) return;
-    const destination = destinations[Number(answer) - 1];
-    if (!destination) { window.alert('That binder number is not valid.'); return; }
+    const destinationId = await chooseAction('Move item', 'Choose the destination binder.', destinations.map((item) => ({ value: item.id, label: item.name })));
+    if (!destinationId) return;
+    const destination = destinations.find((item) => item.id === destinationId);
+    if (!destination) return;
     ensureInventory(binder); ensureInventory(destination);
     const item = binder.collectionItems.find((entry) => entry.id === slot.collectionItemId);
     const movedSlot = { ...slot, collectionItemId: uid() };
@@ -185,9 +224,12 @@ async function turn(delta) {
 async function editSlot(index) {
   const binder = activeBinder(); if (!binder) return;
   const existing = binder.pages[pageIndex].slots[index];
-  const action = window.prompt('What would you like in this pocket?\n\n1 = Add / replace card photo\n2 = Add wanted poster\n3 = Remove / move this item\n4 = Cancel\n\nEnter 1, 2, 3 or 4:', existing ? '1' : '1');
-  if (!action || action.trim() === '4') return;
-  const choice = ({ '1': 'PHOTO', '2': 'WANTED', '3': 'REMOVE' })[action.trim()] || action.toUpperCase();
+  const choice = await chooseAction('What would you like in this pocket?', 'Choose an action for this pocket.', [
+    { value: 'PHOTO', label: existing?.type === 'card' ? 'Add / replace card photo' : 'Add card photo' },
+    { value: 'WANTED', label: existing?.type === 'wanted' ? 'Edit wanted poster' : 'Add wanted poster' },
+    ...(existing ? [{ value: 'REMOVE', label: 'Remove / move this item' }] : []),
+  ]);
+  if (!choice) return;
   if (choice === 'REMOVE') {
     await removeSlot(index); return;
   } else if (choice === 'WANTED') {

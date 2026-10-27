@@ -81,6 +81,12 @@
     </div>
     <div class="binder-page-controls"><button id="addBinderPage" type="button">＋ Add page</button><button id="deleteBinderPage" type="button">Remove current page</button></div>
     <input id="binderPhotoInput" type="file" accept="image/*" capture="environment" hidden>
+    <dialog id="binderChoiceDialog" class="binder-choice-dialog" aria-labelledby="binderChoiceTitle">
+      <h3 id="binderChoiceTitle">Choose an action</h3>
+      <p id="binderChoiceMessage"></p>
+      <div id="binderChoiceOptions" class="binder-choice-options"></div>
+      <div class="binder-choice-footer"><button id="binderChoiceCancel" type="button" class="secondary">Cancel</button></div>
+    </dialog>
   </section>
   <script type="module" src="src/main.js"></script>
   <script type="module" src="src/binder.js"></script>
