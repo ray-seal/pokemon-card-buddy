@@ -46,9 +46,12 @@ async function saveBinder(binder) {
     binder.pages = synced.pages;
     binder.cloudId = synced.cloudId;
     binder.updatedAt = synced.updatedAt;
+    delete binder._cloudPending;
     await persistLocalBinder(binder);
     $('binderStatus').textContent = 'Binder pages and photos are backed up to your private cloud account.';
   } catch (error) {
+    binder._cloudPending = true;
+    await persistLocalBinder(binder);
     $('binderStatus').textContent = 'Saved on this device, but cloud backup failed: ' + (error?.message || 'Please try again when online.');
   }
 }
@@ -307,8 +310,12 @@ async function init() {
     if (user) {
       const localBinders = binders;
       const remoteBinders = await loadCloudBinders();
+      const localById = new Map(localBinders.map((item) => [item.id, item]));
       const remoteIds = new Set(remoteBinders.map((item) => item.id));
-      binders = remoteBinders.concat(localBinders.filter((item) => !remoteIds.has(item.id)));
+      binders = remoteBinders.map((remote) => {
+        const local = localById.get(remote.id);
+        return local?._cloudPending ? local : remote;
+      }).concat(localBinders.filter((item) => !remoteIds.has(item.id)));
       $('binderStatus').textContent = 'Cloud binders loaded. Uploading any device-only changes…';
     }
   } catch (error) {
@@ -328,9 +335,12 @@ async function init() {
         binder.pages = synced.pages;
         binder.cloudId = synced.cloudId;
         binder.updatedAt = synced.updatedAt;
+        delete binder._cloudPending;
         await persistLocalBinder(binder);
       }
     } catch (error) {
+      binder._cloudPending = true;
+      await persistLocalBinder(binder);
       $('binderStatus').textContent = 'Some binder content is still only on this device. Cloud upload failed: ' + (error?.message || 'try again online.');
     }
   }
