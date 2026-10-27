@@ -2,7 +2,7 @@ import { POKEMON, REGIONS } from './data/pokemon.js';
 import { loadProfiles, createProfile, switchProfile, loadProfileCollection, saveProfileCollection, renameProfile, deleteProfile } from './storage.js';
 import { getStatus, setFlag, getStats } from './collection.js';
 import { applyView, FILTERS, SORTS } from './filter.js';
-import { supabase, signIn, signUp, signOut, currentUser, syncCollection } from './cloud.js';
+import { signIn, signUp, signOut, currentUser, syncCollection, watchAuth } from './cloud.js';
 
 const activePokemon = POKEMON;
 let profiles = loadProfiles();
@@ -217,7 +217,7 @@ syncButton.addEventListener('click', async () => {
     accountStatus.textContent = error?.message || 'Sync failed. Your local data has not been deleted.';
   } finally { syncButton.disabled = false; }
 });
-supabase.auth.onAuthStateChange((_event, session) => showAccount(session?.user || null));
+watchAuth(showAccount).catch(() => { /* Cloud auth is unavailable offline; local checklist remains usable. */ });
 currentUser().then(showAccount).catch(() => showAccount(null));
 
 if ('serviceWorker' in navigator) {
