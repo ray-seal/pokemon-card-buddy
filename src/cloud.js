@@ -53,6 +53,7 @@ export async function syncCollection(name, localCollection) {
     .from('user_collections')
     .select('id,name,collection_data,updated_at')
     .eq('user_id', user.id)
+    .eq('name', name)
     .order('updated_at', { ascending: false })
     .limit(1);
   if (readError) throw readError;
