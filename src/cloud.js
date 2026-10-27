@@ -160,6 +160,10 @@ export async function saveCloudBinder(localBinder) {
   const user = await currentUser();
   if (!user) throw new Error('Sign in to back up binder photos and pages.');
   const binder = structuredClone(localBinder);
+  for (const page of binder.pages || []) for (const slot of page.slots || []) if (slot) delete slot.photoUrl;
+  const { data: existingRows, error: existingError } = await client.from('binders').select('id,pages').eq('user_id', user.id).eq('local_id', String(localBinder.id)).limit(1);
+  if (existingError) throw existingError;
+  const oldPhotoPaths = new Set((existingRows?.[0]?.pages || []).flatMap((page) => (page.slots || []).map((slot) => slot?.photoPath).filter(Boolean)));
   for (let pageIndex = 0; pageIndex < (binder.pages || []).length; pageIndex++) {
     const page = binder.pages[pageIndex];
     for (let slotIndex = 0; slotIndex < (page.slots || []).length; slotIndex++) {
@@ -189,6 +193,12 @@ export async function saveCloudBinder(localBinder) {
     updated_at: new Date().toISOString(),
   }, { onConflict: 'user_id,local_id' }).select('id,local_id,name,pages,collection_items,updated_at').single();
   if (error) throw error;
+  const newPhotoPaths = new Set((binder.pages || []).flatMap((page) => (page.slots || []).map((slot) => slot?.photoPath).filter(Boolean)));
+  const obsoletePaths = [...oldPhotoPaths].filter((path) => !newPhotoPaths.has(path));
+  if (obsoletePaths.length) {
+    const { error: cleanupError } = await client.storage.from('binder-photos').remove(obsoletePaths);
+    if (cleanupError) console.warn('Cloud binder saved, but obsolete photo cleanup failed.', cleanupError);
+  }
   return { ...binder, cloudId: data.id, updatedAt: data.updated_at };
 }
 
