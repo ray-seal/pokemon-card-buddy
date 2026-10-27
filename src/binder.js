@@ -62,6 +62,23 @@ function slotCard(slot, index) {
     el.append(plus, label);
   }
   el.addEventListener('click', () => editSlot(index));
+  if (slot) {
+    const remove = document.createElement('span');
+    remove.className = 'slot-remove';
+    remove.textContent = '×';
+    remove.title = 'Remove this card or wanted poster';
+    remove.setAttribute('role', 'button');
+    remove.setAttribute('aria-label', 'Remove this slot');
+    remove.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      if (!window.confirm('Remove this card or wanted poster from the binder?')) return;
+      const binder = activeBinder();
+      binder.pages[pageIndex].slots[index] = null;
+      await saveBinder(binder);
+      render();
+    });
+    el.append(remove);
+  }
   el.draggable = !!slot;
   el.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', String(index)); e.dataTransfer.effectAllowed = 'move'; });
   el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('drop-target'); });
@@ -109,9 +126,9 @@ async function turn(delta) {
 async function editSlot(index) {
   const binder = activeBinder(); if (!binder) return;
   const existing = binder.pages[pageIndex].slots[index];
-  const action = window.prompt('Slot action: type PHOTO, WANTED, REMOVE, or CANCEL', existing ? 'PHOTO' : 'PHOTO');
-  if (!action || action.toUpperCase() === 'CANCEL') return;
-  const choice = action.toUpperCase();
+  const action = window.prompt('What would you like in this pocket?\n\n1 = Add / replace card photo\n2 = Add wanted poster\n3 = Remove this card or poster\n4 = Cancel\n\nEnter 1, 2, 3 or 4:', existing ? '1' : '1');
+  if (!action || action.trim() === '4') return;
+  const choice = ({ '1': 'PHOTO', '2': 'WANTED', '3': 'REMOVE' })[action.trim()] || action.toUpperCase();
   if (choice === 'REMOVE') {
     binder.pages[pageIndex].slots[index] = null;
   } else if (choice === 'WANTED') {
@@ -132,7 +149,7 @@ async function editSlot(index) {
       } catch { window.alert('That photo could not be loaded. Please try another image.'); }
     };
     input.click(); return;
-  } else { window.alert('Choose PHOTO, WANTED, REMOVE or CANCEL.'); return; }
+  } else { window.alert('Please enter 1, 2, 3 or 4.'); return; }
   await saveBinder(binder); render();
 }
 function compressImage(file) {
