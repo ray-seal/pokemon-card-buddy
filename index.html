@@ -57,9 +57,11 @@
     </div>
     <p id="binderStatus" class="note">Photos are saved locally on this device. Back up your device data to avoid losing them.</p>
     <div id="binderBook" class="binder-book">
+      <div class="binder-drop-edge edge-left" data-direction="prev" aria-label="Drag here to turn to previous page">‹<span>Previous</span></div>
       <button id="prevBinderPage" class="page-nav" type="button" aria-label="Previous page">‹</button>
       <div id="binderPages" class="binder-pages" aria-label="Nine pocket binder page"></div>
       <button id="nextBinderPage" class="page-nav" type="button" aria-label="Next page">›</button>
+      <div class="binder-drop-edge edge-right" data-direction="next" aria-label="Drag here to turn to next page">›<span>Next</span></div>
     </div>
     <div class="binder-page-controls"><button id="addBinderPage" type="button">＋ Add page</button><button id="deleteBinderPage" type="button">Remove current page</button></div>
     <input id="binderPhotoInput" type="file" accept="image/*" capture="environment" hidden>
