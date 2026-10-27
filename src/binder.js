@@ -72,6 +72,7 @@ function chooseAction(title, message, choices, cancelLabel = 'Cancel') {
     options.append(button);
   }
   cancel.textContent = cancelLabel;
+  cancel.onclick = () => dialog.close();
   return new Promise((resolve) => {
     const onChoice = (event) => { cleanup(); resolve(event.detail); };
     const onCancel = () => { cleanup(); resolve(null); };
