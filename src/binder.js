@@ -8,6 +8,8 @@ let activeId = null;
 let pageIndex = 0;
 let turning = false;
 let touchStartX = null;
+let draggedSlot = null;
+let edgeTurnTimer = null;
 
 function openDb() {
   return new Promise((resolve, reject) => {
@@ -80,15 +82,21 @@ function slotCard(slot, index) {
     el.append(remove);
   }
   el.draggable = !!slot;
-  el.addEventListener('dragstart', (e) => { e.dataTransfer.setData('text/plain', String(index)); e.dataTransfer.effectAllowed = 'move'; });
+  el.addEventListener('dragstart', (e) => { draggedSlot = { pageIndex, slotIndex: index }; e.dataTransfer.setData('text/plain', JSON.stringify(draggedSlot)); e.dataTransfer.effectAllowed = 'move'; $('binderBook').classList.add('is-dragging'); });
+  el.addEventListener('dragend', () => { draggedSlot = null; clearTimeout(edgeTurnTimer); $('binderBook').classList.remove('is-dragging'); document.querySelectorAll('.binder-drop-edge').forEach((edge) => edge.classList.remove('edge-active')); });
   el.addEventListener('dragover', (e) => { e.preventDefault(); el.classList.add('drop-target'); });
   el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
   el.addEventListener('drop', async (e) => {
     e.preventDefault(); el.classList.remove('drop-target');
-    const from = Number(e.dataTransfer.getData('text/plain'));
-    if (!Number.isInteger(from) || from === index) return;
-    const binder = activeBinder(); const slots = binder.pages[pageIndex].slots;
-    [slots[from], slots[index]] = [slots[index], slots[from]];
+    let source;
+    try { source = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
+    if (!source || !Number.isInteger(source.pageIndex) || !Number.isInteger(source.slotIndex)) return;
+    if (source.pageIndex === pageIndex && source.slotIndex === index) return;
+    const binder = activeBinder();
+    const fromSlots = binder.pages[source.pageIndex]?.slots;
+    const toSlots = binder.pages[pageIndex]?.slots;
+    if (!fromSlots || !toSlots || !fromSlots[source.slotIndex]) return;
+    [fromSlots[source.slotIndex], toSlots[index]] = [toSlots[index], fromSlots[source.slotIndex]];
     await saveBinder(binder); render();
   });
   return el;
@@ -207,6 +215,21 @@ async function init() {
   });
   $('prevBinderPage').addEventListener('click', () => turn(-1));
   $('nextBinderPage').addEventListener('click', () => turn(1));
+  document.querySelectorAll('.binder-drop-edge').forEach((edge) => {
+    edge.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      if (!draggedSlot || edgeTurnTimer) return;
+      edge.classList.add('edge-active');
+      const delta = edge.dataset.direction === 'next' ? 1 : -1;
+      edgeTurnTimer = setTimeout(async () => {
+        edgeTurnTimer = null;
+        await turn(delta);
+        edge.classList.remove('edge-active');
+      }, 450);
+    });
+    edge.addEventListener('dragleave', () => { clearTimeout(edgeTurnTimer); edgeTurnTimer = null; edge.classList.remove('edge-active'); });
+    edge.addEventListener('drop', (event) => { event.preventDefault(); clearTimeout(edgeTurnTimer); edgeTurnTimer = null; edge.classList.remove('edge-active'); });
+  });
   $('binderBook').addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].clientX; }, { passive: true });
   $('binderBook').addEventListener('touchend', (e) => {
     if (touchStartX === null) return;
