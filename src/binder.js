@@ -35,6 +35,61 @@ function saveBinder(binder) {
 }
 function uid() { return globalThis.crypto?.randomUUID?.() || String(Date.now()) + Math.random().toString(36).slice(2); }
 function newPage() { return { id: uid(), slots: Array(9).fill(null) }; }
+function ensureInventory(binder) {
+  if (!Array.isArray(binder.collectionItems)) binder.collectionItems = [];
+  for (const page of binder.pages || []) for (const slot of page.slots || []) {
+    if (!slot || slot.collectionItemId) continue;
+    slot.collectionItemId = uid();
+    binder.collectionItems.push({ id: slot.collectionItemId, type: slot.type, name: slot.name || '', number: slot.number || '', owned: slot.type === 'card', wanted: slot.type === 'wanted' });
+  }
+}
+function syncItem(binder, slot) {
+  ensureInventory(binder);
+  if (!slot.collectionItemId) slot.collectionItemId = uid();
+  const value = { id: slot.collectionItemId, type: slot.type, name: slot.name || '', number: slot.number || '', owned: slot.type === 'card', wanted: slot.type === 'wanted' };
+  const item = binder.collectionItems.find((entry) => entry.id === value.id);
+  if (item) Object.assign(item, value); else binder.collectionItems.push(value);
+}
+async function removeSlot(index) {
+  const binder = activeBinder();
+  const slot = binder?.pages[pageIndex]?.slots[index];
+  if (!binder || !slot) return;
+  const choice = window.prompt('Remove this item how?\\n\\n1 = Binder only (keep in collection)\\n2 = Binder and collection\\n3 = Move to another binder\\n4 = Cancel', '1');
+  if (!choice || choice.trim() === '4') return;
+  if (choice.trim() === '1') {
+    binder.pages[pageIndex].slots[index] = null;
+    await saveBinder(binder);
+  } else if (choice.trim() === '2') {
+    if (!window.confirm('Remove this specific entry from the linked collection too? Other copies will be kept.')) return;
+    ensureInventory(binder);
+    binder.collectionItems = binder.collectionItems.filter((item) => item.id !== slot.collectionItemId);
+    binder.pages[pageIndex].slots[index] = null;
+    await saveBinder(binder);
+  } else if (choice.trim() === '3') {
+    const destinations = binders.filter((item) => item.id !== binder.id);
+    if (!destinations.length) { window.alert('Create another binder first, then you can move items between binders.'); return; }
+    const options = destinations.map((item, i) => (i + 1) + ' = ' + item.name).join('\\n');
+    const answer = window.prompt('Move to which binder?\\n\\n' + options + '\\n\\nEnter a number:');
+    if (answer === null || !answer.trim()) return;
+    const destination = destinations[Number(answer) - 1];
+    if (!destination) { window.alert('That binder number is not valid.'); return; }
+    ensureInventory(binder); ensureInventory(destination);
+    const item = binder.collectionItems.find((entry) => entry.id === slot.collectionItemId);
+    const movedSlot = { ...slot, collectionItemId: uid() };
+    if (item) {
+      binder.collectionItems = binder.collectionItems.filter((entry) => entry.id !== item.id);
+      destination.collectionItems.push({ ...item, id: movedSlot.collectionItemId });
+    } else syncItem(destination, movedSlot);
+    let targetPage = destination.pages.find((page) => page.slots.some((entry) => !entry));
+    if (!targetPage) { targetPage = newPage(); destination.pages.push(targetPage); }
+    targetPage.slots[targetPage.slots.findIndex((entry) => !entry)] = movedSlot;
+    binder.pages[pageIndex].slots[index] = null;
+    await saveBinder(binder); await saveBinder(destination);
+    activeId = destination.id;
+    pageIndex = destination.pages.indexOf(targetPage);
+  } else { window.alert('Please enter 1, 2, 3 or 4.'); return; }
+  render();
+}
 function activeBinder() { return binders.find((b) => b.id === activeId); }
 function slotCard(slot, index) {
   const el = document.createElement('button');
@@ -73,11 +128,7 @@ function slotCard(slot, index) {
     remove.setAttribute('aria-label', 'Remove this slot');
     remove.addEventListener('click', async (event) => {
       event.stopPropagation();
-      if (!window.confirm('Remove this card or wanted poster from the binder?')) return;
-      const binder = activeBinder();
-      binder.pages[pageIndex].slots[index] = null;
-      await saveBinder(binder);
-      render();
+      await removeSlot(index);
     });
     el.append(remove);
   }
@@ -134,7 +185,7 @@ async function turn(delta) {
 async function editSlot(index) {
   const binder = activeBinder(); if (!binder) return;
   const existing = binder.pages[pageIndex].slots[index];
-  const action = window.prompt('What would you like in this pocket?\n\n1 = Add / replace card photo\n2 = Add wanted poster\n3 = Remove this card or poster\n4 = Cancel\n\nEnter 1, 2, 3 or 4:', existing ? '1' : '1');
+  const action = window.prompt('What would you like in this pocket?\n\n1 = Add / replace card photo\n2 = Add wanted poster\n3 = Remove / move this item\n4 = Cancel\n\nEnter 1, 2, 3 or 4:', existing ? '1' : '1');
   if (!action || action.trim() === '4') return;
   const choice = ({ '1': 'PHOTO', '2': 'WANTED', '3': 'REMOVE' })[action.trim()] || action.toUpperCase();
   if (choice === 'REMOVE') {
@@ -143,7 +194,7 @@ async function editSlot(index) {
     const name = window.prompt('Wanted Pokémon or card name:', existing?.name || '');
     if (!name?.trim()) return;
     const number = window.prompt('Optional Pokédex number (leave blank if not relevant):', existing?.number || '');
-    binder.pages[pageIndex].slots[index] = { type: 'wanted', name: name.trim().slice(0, 80), number: number?.trim() || '' };
+    binder.pages[pageIndex].slots[index] = { type: 'wanted', collectionItemId: existing?.collectionItemId || uid(), name: name.trim().slice(0, 80), number: number?.trim() || '' };\n    syncItem(binder, binder.pages[pageIndex].slots[index]);
   } else if (choice === 'PHOTO') {
     const input = $('binderPhotoInput');
     input.value = '';
@@ -152,7 +203,7 @@ async function editSlot(index) {
       try {
         const data = await compressImage(file);
         const name = window.prompt('Optional card name:', existing?.name || file.name.replace(/\.[^.]+$/, '')) ?? '';
-        binder.pages[pageIndex].slots[index] = { type: 'card', data, name: name.slice(0, 80) };
+        binder.pages[pageIndex].slots[index] = { type: 'card', collectionItemId: existing?.collectionItemId || uid(), data, name: name.slice(0, 80) };\n        syncItem(binder, binder.pages[pageIndex].slots[index]);
         await saveBinder(binder); render();
       } catch { window.alert('That photo could not be loaded. Please try another image.'); }
     };
@@ -182,12 +233,12 @@ async function init() {
   try { db = await openDb(); binders = await allBinders(); }
   catch { $('binderStatus').textContent = 'Local photo storage is unavailable in this browser.'; return; }
   if (!binders.length) {
-    const b = { id: uid(), name: 'My Binder', pages: [newPage()] };
+    const b = { id: uid(), name: 'My Binder', pages: [newPage()], collectionItems: [] };
     binders.push(b); activeId = b.id; await saveBinder(b);
-  } else activeId = binders[0].id;
+  } else activeId = binders[0].id;\n  for (const binder of binders) { ensureInventory(binder); await saveBinder(binder); }
   $('newBinder').addEventListener('click', async () => {
     const name = window.prompt('Name this binder:'); if (!name?.trim()) return;
-    const b = { id: uid(), name: name.trim().slice(0, 50), pages: [newPage()] };
+    const b = { id: uid(), name: name.trim().slice(0, 50), pages: [newPage()], collectionItems: [] };
     binders.push(b); activeId = b.id; pageIndex = 0; await saveBinder(b); render();
   });
   $('binderSelect').addEventListener('change', () => { activeId = $('binderSelect').value; pageIndex = 0; render(); });
@@ -201,7 +252,7 @@ async function init() {
     if (!window.confirm(`Delete “${b.name}” and its binder photos? This cannot be undone. Your Pokédex collections will not be affected.`)) return;
     await new Promise((resolve, reject) => { const req = db.transaction(STORE, 'readwrite').objectStore(STORE).delete(b.id); req.onsuccess = resolve; req.onerror = () => reject(req.error); });
     binders = await allBinders();
-    if (!binders.length) { const fresh = { id: uid(), name: 'My Binder', pages: [newPage()] }; binders.push(fresh); await saveBinder(fresh); }
+    if (!binders.length) { const fresh = { id: uid(), name: 'My Binder', pages: [newPage()], collectionItems: [] }; binders.push(fresh); await saveBinder(fresh); }
     activeId = binders[0].id; pageIndex = 0; render();
   });
   $('addBinderPage').addEventListener('click', async () => {
