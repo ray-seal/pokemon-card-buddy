@@ -1,11 +1,11 @@
 // Bump CACHE_VERSION on every release that changes cached files.
 // Only caches created by this app (prefix "kanto151-shell-") are ever deleted;
 // the collection lives in localStorage, which the service worker never touches.
-const CACHE_VERSION = 'v8';
+const CACHE_VERSION = 'v10';
 const CACHE = `kanto151-shell-${CACHE_VERSION}`;
 const ASSETS = [
   './', './index.html', './styles.css', './manifest.webmanifest',
-  './src/main.js', './src/binder.js', './src/storage.js', './src/collection.js', './src/filter.js',
+  './src/main.js', './src/binder.js', './src/storage.js', './src/collection.js', './src/filter.js', './src/cloud.js',
   './src/data/pokemon.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
 ];

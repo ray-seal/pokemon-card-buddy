@@ -2,6 +2,7 @@ import { POKEMON, REGIONS } from './data/pokemon.js';
 import { loadProfiles, createProfile, switchProfile, loadProfileCollection, saveProfileCollection, renameProfile, deleteProfile } from './storage.js';
 import { getStatus, setFlag, getStats } from './collection.js';
 import { applyView, FILTERS, SORTS } from './filter.js';
+import { signIn, signUp, signOut, currentUser, syncCollection, watchAuth } from './cloud.js';
 
 const activePokemon = POKEMON;
 let profiles = loadProfiles();
@@ -148,6 +149,76 @@ sortSel.addEventListener('change', () => { view.sort = sortSel.value; renderList
 renderProfiles();
 renderStats();
 renderList();
+
+const accountStatus = $('accountStatus');
+const accountEmail = $('accountEmail');
+const accountPassword = $('accountPassword');
+const signInButton = $('signIn');
+const signUpButton = $('signUp');
+const signOutButton = $('signOut');
+const syncButton = $('syncCloud');
+
+function showAccount(user) {
+  const signedIn = Boolean(user);
+  signInButton.hidden = signedIn;
+  signUpButton.hidden = signedIn;
+  signOutButton.hidden = !signedIn;
+  syncButton.disabled = !signedIn;
+  accountEmail.disabled = signedIn;
+  accountPassword.disabled = signedIn;
+  accountStatus.textContent = signedIn
+    ? `Signed in as ${user.email}. Your data remains local until you choose to sync.`
+    : 'Your collection stays on this device until you sign in and choose Sync collection.';
+}
+
+async function accountAction(action) {
+  const email = accountEmail.value.trim();
+  const password = accountPassword.value;
+  if (!email || !password) {
+    accountStatus.textContent = 'Enter your email and password first.';
+    return;
+  }
+  signInButton.disabled = signUpButton.disabled = true;
+  accountStatus.textContent = 'Connecting securely…';
+  try {
+    const result = await action(email, password);
+    const user = result?.user || result?.session?.user || await currentUser();
+    showAccount(user);
+    accountStatus.textContent = result?.user && !result?.session
+      ? 'Account created. Check your email for a confirmation link, then sign in.'
+      : `Signed in as ${user?.email || email}.`;
+  } catch (error) {
+    accountStatus.textContent = error?.message || 'Account request failed. Please try again.';
+  } finally {
+    signInButton.disabled = signUpButton.disabled = false;
+  }
+}
+signInButton.addEventListener('click', () => accountAction(signIn));
+signUpButton.addEventListener('click', () => accountAction(signUp));
+signOutButton.addEventListener('click', async () => {
+  try {
+    await signOut();
+    showAccount(null);
+    accountStatus.textContent = 'Signed out. Your local collection remains on this device.';
+  } catch (error) { accountStatus.textContent = error?.message || 'Could not sign out.'; }
+});
+syncButton.addEventListener('click', async () => {
+  syncButton.disabled = true;
+  accountStatus.textContent = 'Syncing your active collection…';
+  try {
+    const result = await syncCollection(profiles.profiles[profiles.activeId].name, collection);
+    collection = result.collection;
+    saveProfileCollection(profiles.activeId, collection);
+    renderStats(); renderList();
+    accountStatus.textContent = result.direction === 'uploaded'
+      ? 'Collection backed up to your account. On another device, sign in and use Sync collection to merge checklist progress.'
+      : 'Collection synced. Owned and wanted flags are merged across devices.';
+  } catch (error) {
+    accountStatus.textContent = error?.message || 'Sync failed. Your local data has not been deleted.';
+  } finally { syncButton.disabled = false; }
+});
+watchAuth(showAccount).catch(() => { /* Cloud auth is unavailable offline; local checklist remains usable. */ });
+currentUser().then(showAccount).catch(() => showAccount(null));
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
