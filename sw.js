@@ -1,7 +1,7 @@
 // Bump CACHE_VERSION on every release that changes cached files.
 // Only caches created by this app (prefix "kanto151-shell-") are ever deleted;
 // the collection lives in localStorage, which the service worker never touches.
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const CACHE = `kanto151-shell-${CACHE_VERSION}`;
 const ASSETS = [
   './', './index.html', './styles.css', './manifest.webmanifest',
