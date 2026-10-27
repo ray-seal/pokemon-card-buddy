@@ -66,8 +66,8 @@ function chooseAction(title, message, choices, cancelLabel = 'Cancel') {
     button.className = 'binder-choice-button';
     button.textContent = choice.label;
     button.addEventListener('click', () => {
-      dialog.close();
       dialog.dispatchEvent(new CustomEvent('binder-choice', { detail: choice.value }));
+      dialog.close();
     }, { once: true });
     options.append(button);
   }
