@@ -262,3 +262,13 @@ main { max-width:54rem; margin:0 auto; padding:0 1rem 2rem; }
 .account-panel .account-fields { display:flex; align-items:end; flex-wrap:wrap; gap:.55rem; }
 .account-panel .account-fields label { display:flex; flex:1 1 13rem; flex-direction:column; gap:.3rem; color:var(--muted); }
 .account-panel .account-fields input { width:100%; min-width:0; padding:.7rem; border:1px solid var(--line); border-radius:.7rem; background:#0b1120; color:var(--fg); }
+
+.binder-choice-dialog { width:min(90vw,26rem); max-width:26rem; max-height:min(82dvh,42rem); overflow-y:auto; padding:1.1rem; border:1px solid rgba(125,170,255,.35); border-radius:1.1rem; color:var(--fg,#edf3ff); background:#10182a; box-shadow:0 1rem 4rem #0009; }
+.binder-choice-dialog::backdrop { background:rgba(2,6,18,.72); backdrop-filter:blur(3px); }
+.binder-choice-dialog h3 { margin:0 0 .45rem; font-size:1.15rem; }
+.binder-choice-dialog p { margin:0 0 .9rem; color:var(--muted,#aab4ca); line-height:1.45; }
+.binder-choice-options { display:grid; gap:.55rem; }
+.binder-choice-options .binder-choice-button { width:100%; min-height:3rem; text-align:left; padding:.8rem .9rem; border-radius:.75rem; }
+.binder-choice-footer { display:flex; justify-content:flex-end; margin-top:.85rem; }
+.binder-choice-footer button { min-width:6rem; }
+@media (max-width:36rem) { .binder-choice-dialog { padding:1rem; } .binder-choice-options .binder-choice-button { min-height:3.25rem; } }
