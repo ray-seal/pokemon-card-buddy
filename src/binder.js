@@ -1,3 +1,4 @@
+import { currentUser, saveCloudBinder, loadCloudBinders, getBinderPhotoUrl, deleteCloudBinder } from './cloud.js';
 const DB_NAME = 'pokemon-card-buddy-binders';
 const DB_VERSION = 1;
 const STORE = 'binders';
@@ -26,12 +27,30 @@ function allBinders() {
     req.onerror = () => reject(req.error);
   });
 }
-function saveBinder(binder) {
+function persistLocalBinder(binder) {
   return new Promise((resolve, reject) => {
     const req = db.transaction(STORE, 'readwrite').objectStore(STORE).put(binder);
     req.onsuccess = resolve;
     req.onerror = () => reject(req.error);
   });
+}
+async function saveBinder(binder) {
+  await persistLocalBinder(binder);
+  try {
+    const user = await currentUser();
+    if (!user) {
+      $('binderStatus').textContent = 'Binder is saved on this device. Sign in to back up pages and photos to the cloud.';
+      return;
+    }
+    const synced = await saveCloudBinder(binder);
+    binder.pages = synced.pages;
+    binder.cloudId = synced.cloudId;
+    binder.updatedAt = synced.updatedAt;
+    await persistLocalBinder(binder);
+    $('binderStatus').textContent = 'Binder pages and photos are backed up to your private cloud account.';
+  } catch (error) {
+    $('binderStatus').textContent = 'Saved on this device, but cloud backup failed: ' + (error?.message || 'Please try again when online.');
+  }
 }
 function uid() { return globalThis.crypto?.randomUUID?.() || String(Date.now()) + Math.random().toString(36).slice(2); }
 function newPage() { return { id: uid(), slots: Array(9).fill(null) }; }
@@ -137,8 +156,15 @@ function slotCard(slot, index) {
   el.dataset.slot = index;
   if (slot?.type === 'card' && slot.data) {
     const img = document.createElement('img');
-    img.src = slot.data;
     img.alt = slot.name || 'Collection card';
+    if (slot.data) img.src = slot.data;
+    else if (slot.photoUrl) img.src = slot.photoUrl;
+    else if (slot.photoPath) {
+      img.alt = (slot.name || 'Collection card') + ' (loading photo)';
+      getBinderPhotoUrl(slot.photoPath).then((url) => { img.src = url; }).catch(() => {
+        img.alt = (slot.name || 'Collection card') + ' (photo unavailable offline)';
+      });
+    }
     el.append(img);
     const label = document.createElement('span');
     label.className = 'slot-caption';
@@ -275,12 +301,39 @@ async function init() {
   const section = $('binderSection');
   if (!section) return;
   try { db = await openDb(); binders = await allBinders(); }
-  catch { $('binderStatus').textContent = 'Local photo storage is unavailable in this browser.'; return; }
+  catch { $('binderStatus').textContent = 'Local binder storage is unavailable in this browser.'; return; }
+  try {
+    const user = await currentUser();
+    if (user) {
+      const localBinders = binders;
+      const remoteBinders = await loadCloudBinders();
+      const remoteIds = new Set(remoteBinders.map((item) => item.id));
+      binders = remoteBinders.concat(localBinders.filter((item) => !remoteIds.has(item.id)));
+      $('binderStatus').textContent = 'Cloud binders loaded. Uploading any device-only changes…';
+    }
+  } catch (error) {
+    $('binderStatus').textContent = 'Could not load cloud binders. Local copies are preserved: ' + (error?.message || 'check your connection.');
+  }
   if (!binders.length) {
     const b = { id: uid(), name: 'My Binder', pages: [newPage()], collectionItems: [] };
-    binders.push(b); activeId = b.id; await saveBinder(b);
+    binders.push(b); activeId = b.id; await persistLocalBinder(b);
   } else activeId = binders[0].id;
-  for (const binder of binders) { ensureInventory(binder); await saveBinder(binder); }
+  for (const binder of binders) {
+    ensureInventory(binder);
+    await persistLocalBinder(binder);
+    try {
+      const user = await currentUser();
+      if (user) {
+        const synced = await saveCloudBinder(binder);
+        binder.pages = synced.pages;
+        binder.cloudId = synced.cloudId;
+        binder.updatedAt = synced.updatedAt;
+        await persistLocalBinder(binder);
+      }
+    } catch (error) {
+      $('binderStatus').textContent = 'Some binder content is still only on this device. Cloud upload failed: ' + (error?.message || 'try again online.');
+    }
+  }
   $('newBinder').addEventListener('click', async () => {
     const name = window.prompt('Name this binder:'); if (!name?.trim()) return;
     const b = { id: uid(), name: name.trim().slice(0, 50), pages: [newPage()], collectionItems: [] };
@@ -295,6 +348,8 @@ async function init() {
   $('removeBinder').addEventListener('click', async () => {
     const b = activeBinder(); if (!b) return;
     if (!window.confirm(`Delete “${b.name}” and its binder photos? This cannot be undone. Your Pokédex collections will not be affected.`)) return;
+    try { await deleteCloudBinder(b.id); }
+    catch (error) { $('binderStatus').textContent = 'Could not delete the cloud backup, so the binder was kept. ' + (error?.message || ''); return; }
     await new Promise((resolve, reject) => { const req = db.transaction(STORE, 'readwrite').objectStore(STORE).delete(b.id); req.onsuccess = resolve; req.onerror = () => reject(req.error); });
     binders = await allBinders();
     if (!binders.length) { const fresh = { id: uid(), name: 'My Binder', pages: [newPage()], collectionItems: [] }; binders.push(fresh); await saveBinder(fresh); }
