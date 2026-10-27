@@ -21,7 +21,7 @@ main { max-width:50rem; margin:0 auto; padding:0 1rem 2rem; }
 .check { display:flex; align-items:center; gap:.25rem; min-height:2.75rem; padding:0 .3rem; font-size:.85rem; cursor:pointer; }
 .check input { width:1.3rem; height:1.3rem; }
 .empty { text-align:center; padding:2rem; color:var(--muted); font-size:1.1rem; }
-@media (min-height:48rem) and (min-width:40rem) { .top { position:sticky; top:0; z-index:2; } }
+/* Keep the header in normal document flow. Sticky headers can clip at the top in mobile webviews. */
 @media (max-width:30rem) { .badge { display:block; margin:0; } .check { flex-direction:column; gap:0; font-size:.7rem; } }
 
 .profilebar, .regions { display:flex; gap:.5rem; align-items:center; margin:.4rem 0; }
@@ -73,3 +73,8 @@ main { max-width:50rem; margin:0 auto; padding:0 1rem 2rem; }
  .page-nav { width:1.7rem; height:1.7rem; flex-basis:1.7rem; font-size:1.5rem; }
  .slot-caption { font-size:.55rem !important; }
 }
+
+.slot-remove { position:absolute; top:.18rem; right:.18rem; z-index:2; display:grid; place-items:center; width:1.5rem; height:1.5rem; border-radius:50%; background:#b91c1c; color:#fff; border:1px solid #fff; font:bold 1.15rem/1 system-ui,sans-serif; box-shadow:0 1px 4px #0008; cursor:pointer; }
+.slot-remove:active { transform:scale(.92); }
+html { scroll-padding-top: .5rem; }
+body { overflow-anchor: none; }
