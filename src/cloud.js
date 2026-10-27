@@ -169,18 +169,26 @@ export async function saveCloudBinder(localBinder) {
     for (let slotIndex = 0; slotIndex < (page.slots || []).length; slotIndex++) {
       const slot = page.slots[slotIndex];
       if (!slot || slot.type !== 'card') continue;
+      const safeBinderId = String(binder.id).replace(/[^A-Za-z0-9_-]/g, '_');
+      const safeItemId = String(slot.collectionItemId || (pageIndex + '-' + slotIndex)).replace(/[^A-Za-z0-9_-]/g, '_');
+      const targetPath = user.id + '/' + safeBinderId + '/' + safeItemId + '.jpg';
       if (slot.data && slot.data.startsWith('data:')) {
         const response = await fetch(slot.data);
         const blob = await response.blob();
-        const safeBinderId = String(binder.id).replace(/[^A-Za-z0-9_-]/g, '_');
-        const safeItemId = String(slot.collectionItemId || (pageIndex + '-' + slotIndex)).replace(/[^A-Za-z0-9_-]/g, '_');
-        const path = user.id + '/' + safeBinderId + '/' + safeItemId + '.jpg';
-        const { error: uploadError } = await client.storage.from('binder-photos').upload(path, blob, {
+        const { error: uploadError } = await client.storage.from('binder-photos').upload(targetPath, blob, {
           contentType: 'image/jpeg', upsert: true, cacheControl: '3600',
         });
         if (uploadError) throw uploadError;
-        slot.photoPath = path;
+        slot.photoPath = targetPath;
         delete slot.data;
+      } else if (slot.photoPath && slot.photoPath !== targetPath) {
+        const { data: oldPhoto, error: downloadError } = await client.storage.from('binder-photos').download(slot.photoPath);
+        if (downloadError) throw downloadError;
+        const { error: copyError } = await client.storage.from('binder-photos').upload(targetPath, oldPhoto, {
+          contentType: 'image/jpeg', upsert: true, cacheControl: '3600',
+        });
+        if (copyError) throw copyError;
+        slot.photoPath = targetPath;
       }
     }
   }
