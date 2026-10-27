@@ -154,7 +154,7 @@ function slotCard(slot, index) {
   el.type = 'button';
   el.className = 'binder-slot' + (slot?.type === 'wanted' ? ' wanted-slot' : '');
   el.dataset.slot = index;
-  if (slot?.type === 'card' && slot.data) {
+  if (slot?.type === 'card' && (slot.data || slot.photoPath || slot.photoUrl)) {
     const img = document.createElement('img');
     img.alt = slot.name || 'Collection card';
     if (slot.data) img.src = slot.data;
