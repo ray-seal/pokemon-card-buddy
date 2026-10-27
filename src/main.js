@@ -2,7 +2,7 @@ import { POKEMON, REGIONS } from './data/pokemon.js';
 import { loadProfiles, createProfile, switchProfile, loadProfileCollection, saveProfileCollection, renameProfile, deleteProfile } from './storage.js';
 import { getStatus, setFlag, getStats } from './collection.js';
 import { applyView, FILTERS, SORTS } from './filter.js';
-import { signIn, signUp, signOut, currentUser, syncCollection, watchAuth } from './cloud.js';
+import { signIn, signUp, signOut, currentUser, syncCollection, watchAuth, getUsername, saveUsername } from './cloud.js';
 
 const activePokemon = POKEMON;
 let profiles = loadProfiles();
@@ -157,18 +157,62 @@ const signInButton = $('signIn');
 const signUpButton = $('signUp');
 const signOutButton = $('signOut');
 const syncButton = $('syncCloud');
+const accountFields = $('accountFields');
+const accountSummary = $('accountSummary');
+const accountUsername = $('accountUsername');
+let activeUserId = null;
+let usernamePromptFor = null;
 
 function showAccount(user) {
   const signedIn = Boolean(user);
-  signInButton.hidden = signedIn;
-  signUpButton.hidden = signedIn;
-  signOutButton.hidden = !signedIn;
+  accountFields.hidden = signedIn;
+  accountSummary.hidden = !signedIn;
   syncButton.disabled = !signedIn;
-  accountEmail.disabled = signedIn;
-  accountPassword.disabled = signedIn;
-  accountStatus.textContent = signedIn
-    ? `Signed in as ${user.email}. Your data remains local until you choose to sync.`
-    : 'Your collection stays on this device until you sign in and choose Sync collection.';
+  if (!signedIn) {
+    activeUserId = null;
+    accountUsername.textContent = 'Signed out';
+    accountStatus.textContent = 'Your collection stays on this device until you sign in and choose Sync data.';
+  } else {
+    activeUserId = user.id;
+    accountUsername.textContent = 'Loading username…';
+    accountStatus.textContent = 'Signed in. Your Pokédex checklist stays local until you choose Sync data.';
+    loadAccountUsername(user).catch((error) => {
+      accountUsername.textContent = user.email || 'Account';
+      accountStatus.textContent = error?.message || 'Could not load username.';
+    });
+  }
+}
+
+async function loadAccountUsername(user) {
+  const username = await getUsername(user.id);
+  if (activeUserId !== user.id) return;
+  if (username) {
+    accountUsername.textContent = '@' + username;
+    return;
+  }
+  if (usernamePromptFor === user.id) return;
+  usernamePromptFor = user.id;
+  try {
+    while (activeUserId === user.id) {
+      const proposed = window.prompt('Choose your unique Pokémon Card Buddy username. Use 3–20 letters, numbers or underscores:');
+      if (proposed === null) {
+        accountUsername.textContent = user.email || 'Account';
+        accountStatus.textContent = 'You are signed in. Choose a username later by signing in again.';
+        return;
+      }
+      try {
+        const saved = await saveUsername(proposed);
+        if (activeUserId !== user.id) return;
+        accountUsername.textContent = '@' + saved;
+        accountStatus.textContent = 'Username saved. Your Pokédex checklist remains local until you choose Sync data.';
+        return;
+      } catch (error) {
+        window.alert(error?.message || 'Could not save username.');
+      }
+    }
+  } finally {
+    usernamePromptFor = null;
+  }
 }
 
 async function accountAction(action) {
@@ -188,7 +232,7 @@ async function accountAction(action) {
     accountStatus.textContent = needsConfirmation
       ? 'Account created. Check your email and open the confirmation link. Once confirmed, return here and sign in if needed.'
       : user
-        ? `Signed in as ${user.email || email}.`
+        ? 'Signed in. Loading your account…'
         : 'No active session was created. Check your email confirmation, then sign in.';
   } catch (error) {
     accountStatus.textContent = error?.message || 'Account request failed. Please try again.';
@@ -207,20 +251,20 @@ signOutButton.addEventListener('click', async () => {
 });
 syncButton.addEventListener('click', async () => {
   syncButton.disabled = true;
-  accountStatus.textContent = 'Syncing your active collection…';
+  accountStatus.textContent = 'Syncing your Pokédex checklist…';
   try {
     const result = await syncCollection(profiles.profiles[profiles.activeId].name, collection);
     collection = result.collection;
     saveProfileCollection(profiles.activeId, collection);
     renderStats(); renderList();
     accountStatus.textContent = result.direction === 'uploaded'
-      ? 'Collection backed up to your account. On another device, sign in and use Sync collection to merge checklist progress.'
-      : 'Collection synced. Owned and wanted flags are merged across devices.';
+      ? 'Pokédex checklist backed up. Binder photos and card inventory are not synced yet.'
+      : 'Pokédex checklist synced. Binder photos and card inventory are not synced yet.';
   } catch (error) {
     accountStatus.textContent = error?.message || 'Sync failed. Your local data has not been deleted.';
   } finally { syncButton.disabled = false; }
 });
-watchAuth(showAccount).catch(() => { /* Cloud auth is unavailable offline; local checklist remains usable. */ });
+watchAuth(showAccount).catch(() => { /* Local checklist remains usable offline. */ });
 currentUser().then(showAccount).catch(() => showAccount(null));
 
 if ('serviceWorker' in navigator) {
