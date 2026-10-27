@@ -88,3 +88,28 @@ export async function syncCollection(name, localCollection) {
   if (error) throw error;
   return { direction: 'merged', collection: merged };
 }
+
+export async function getUsername(userId) {
+  const client = await getClient();
+  const { data, error } = await client.from('user_profiles').select('username').eq('user_id', userId).maybeSingle();
+  if (error) throw error;
+  return data?.username || null;
+}
+
+export async function saveUsername(username) {
+  const client = await getClient();
+  const user = await currentUser();
+  if (!user) throw new Error('Please sign in first.');
+  const clean = String(username || '').trim();
+  if (!/^[A-Za-z0-9_]{3,20}$/.test(clean)) {
+    throw new Error('Username must be 3–20 characters using letters, numbers or underscores.');
+  }
+  const { data, error } = await client.from('user_profiles').upsert({
+    user_id: user.id, username: clean, updated_at: new Date().toISOString()
+  }, { onConflict: 'user_id' }).select('username').single();
+  if (error) {
+    if (error.code === '23505') throw new Error('That username is already taken. Please choose another.');
+    throw error;
+  }
+  return data.username;
+}
