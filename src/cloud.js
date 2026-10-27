@@ -154,3 +154,107 @@ export async function saveUsername(username) {
   }
   return data.username;
 }
+
+export async function saveCloudBinder(localBinder) {
+  const client = await getClient();
+  const user = await currentUser();
+  if (!user) throw new Error('Sign in to back up binder photos and pages.');
+  const binder = structuredClone(localBinder);
+  for (const page of binder.pages || []) for (const slot of page.slots || []) if (slot) delete slot.photoUrl;
+  const { data: existingRows, error: existingError } = await client.from('binders').select('id,pages').eq('user_id', user.id).eq('local_id', String(localBinder.id)).limit(1);
+  if (existingError) throw existingError;
+  const oldPhotoPaths = new Set((existingRows?.[0]?.pages || []).flatMap((page) => (page.slots || []).map((slot) => slot?.photoPath).filter(Boolean)));
+  for (let pageIndex = 0; pageIndex < (binder.pages || []).length; pageIndex++) {
+    const page = binder.pages[pageIndex];
+    for (let slotIndex = 0; slotIndex < (page.slots || []).length; slotIndex++) {
+      const slot = page.slots[slotIndex];
+      if (!slot || slot.type !== 'card') continue;
+      const safeBinderId = String(binder.id).replace(/[^A-Za-z0-9_-]/g, '_');
+      const safeItemId = String(slot.collectionItemId || (pageIndex + '-' + slotIndex)).replace(/[^A-Za-z0-9_-]/g, '_');
+      const targetPath = user.id + '/' + safeBinderId + '/' + safeItemId + '.jpg';
+      if (slot.data && slot.data.startsWith('data:')) {
+        const response = await fetch(slot.data);
+        const blob = await response.blob();
+        const { error: uploadError } = await client.storage.from('binder-photos').upload(targetPath, blob, {
+          contentType: 'image/jpeg', upsert: true, cacheControl: '3600',
+        });
+        if (uploadError) throw uploadError;
+        slot.photoPath = targetPath;
+        delete slot.data;
+      } else if (slot.photoPath && slot.photoPath !== targetPath) {
+        const { data: oldPhoto, error: downloadError } = await client.storage.from('binder-photos').download(slot.photoPath);
+        if (downloadError) throw downloadError;
+        const { error: copyError } = await client.storage.from('binder-photos').upload(targetPath, oldPhoto, {
+          contentType: 'image/jpeg', upsert: true, cacheControl: '3600',
+        });
+        if (copyError) throw copyError;
+        slot.photoPath = targetPath;
+      }
+    }
+  }
+  const { data, error } = await client.from('binders').upsert({
+    user_id: user.id,
+    local_id: String(localBinder.id),
+    name: binder.name,
+    pages: binder.pages,
+    collection_items: binder.collectionItems || [],
+    updated_at: new Date().toISOString(),
+  }, { onConflict: 'user_id,local_id' }).select('id,local_id,name,pages,collection_items,updated_at').single();
+  if (error) throw error;
+  const newPhotoPaths = new Set((binder.pages || []).flatMap((page) => (page.slots || []).map((slot) => slot?.photoPath).filter(Boolean)));
+  const obsoletePaths = [...oldPhotoPaths].filter((path) => !newPhotoPaths.has(path));
+  if (obsoletePaths.length) {
+    const { error: cleanupError } = await client.storage.from('binder-photos').remove(obsoletePaths);
+    if (cleanupError) console.warn('Cloud binder saved, but obsolete photo cleanup failed.', cleanupError);
+  }
+  return { ...binder, cloudId: data.id, updatedAt: data.updated_at };
+}
+
+export async function loadCloudBinders() {
+  const client = await getClient();
+  const user = await currentUser();
+  if (!user) return [];
+  const { data, error } = await client.from('binders')
+    .select('id,local_id,name,pages,collection_items,updated_at')
+    .eq('user_id', user.id)
+    .order('updated_at', { ascending: true });
+  if (error) throw error;
+  return Promise.all((data || []).map(async (row) => {
+    const binder = { id: row.local_id || row.id, cloudId: row.id, name: row.name, pages: row.pages || [], updatedAt: row.updated_at, collectionItems: row.collection_items || [] };
+    for (const page of binder.pages) for (const slot of page.slots || []) {
+      if (slot?.type === 'card' && slot.photoPath) {
+        try {
+          const { data: signed, error: signedError } = await client.storage.from('binder-photos').createSignedUrl(slot.photoPath, 3600);
+          if (!signedError && signed?.signedUrl) slot.photoUrl = signed.signedUrl;
+        } catch { /* Keep the saved storage path; retry URL generation on next load. */ }
+      }
+    }
+    return binder;
+  }));
+}
+
+export async function getBinderPhotoUrl(path) {
+  const client = await getClient();
+  const { data, error } = await client.storage.from('binder-photos').createSignedUrl(path, 3600);
+  if (error) throw error;
+  return data.signedUrl;
+}
+
+export async function deleteCloudBinder(localId) {
+  const client = await getClient();
+  const user = await currentUser();
+  if (!user) return;
+  const { data: rows, error: readError } = await client.from('binders').select('id,pages')
+    .eq('user_id', user.id).eq('local_id', String(localId));
+  if (readError) throw readError;
+  for (const row of rows || []) {
+    const paths = [];
+    for (const page of row.pages || []) for (const slot of page.slots || []) if (slot?.photoPath) paths.push(slot.photoPath);
+    if (paths.length) {
+      const { error } = await client.storage.from('binder-photos').remove([...new Set(paths)]);
+      if (error) throw error;
+    }
+    const { error } = await client.from('binders').delete().eq('id', row.id).eq('user_id', user.id);
+    if (error) throw error;
+  }
+}
