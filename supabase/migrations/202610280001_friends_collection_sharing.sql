@@ -79,9 +79,12 @@ set search_path = public, pg_temp
 as $
 begin
   if new.user_a <> old.user_a
-     or new.user_b <> old.user_b
-     or new.requested_by <> old.requested_by then
+     or new.user_b <> old.user_b then
     raise exception 'Friend request participants cannot be changed';
+  end if;
+  if new.requested_by <> old.requested_by
+     and not (old.status = 'declined' and new.status = 'pending') then
+    raise exception 'Requester can change only when a declined request is retried';
   end if;
   return new;
 end;
