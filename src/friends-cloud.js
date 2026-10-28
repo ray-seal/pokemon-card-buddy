@@ -77,7 +77,7 @@ export async function loadFriendHub() {
   const { client, user } = await signedInUser();
   const [friendshipsResult, profileResult, collectionsResult, sharesResult] = await Promise.all([
     client.from('friendships').select('id,user_a,user_b,requested_by,status,created_at').order('created_at', { ascending: false }),
-    client.from('user_profiles').select('user_id,username,avatar_id').eq('user_id', user.id).maybeSingle(),
+    client.from('user_profiles').select('user_id,username,friend_code,avatar_id').eq('user_id', user.id).maybeSingle(),
     client.from('user_collections').select('id,name,collection_data,updated_at').eq('user_id', user.id).order('updated_at', { ascending: false }),
     client.from('collection_shares').select('collection_id,friend_id').eq('owner_id', user.id),
   ]);
