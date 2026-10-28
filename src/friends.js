@@ -58,7 +58,7 @@ function showFriendsTab() {
 
 tab.addEventListener('click', showFriendsTab);
 for (const id of ['showCollection', 'showBinder']) {
-  $(id).addEventListener('click', () => { section.hidden = true; });
+  $(id).addEventListener('click', () => { section.hidden = true; tab.classList.remove('active'); });
 }
 
 function collectionSummary(collection) {
