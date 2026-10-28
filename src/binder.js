@@ -52,6 +52,16 @@ function mergeCloudPathsIntoLocal(local, cloud) {
   }
 }
 let retryingUploads = false;
+let retryTimer = null;
+let retryDelay = 15000;
+function scheduleUploadRetry() {
+  if (retryTimer || !navigator.onLine) return;
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    retryPendingUploads();
+  }, retryDelay);
+  retryDelay = Math.min(retryDelay * 2, 5 * 60 * 1000);
+}
 async function retryPendingUploads() {
   if (retryingUploads || !navigator.onLine) return;
   retryingUploads = true;
@@ -103,11 +113,13 @@ async function saveBinder(binder) {
     binder.updatedAt = synced.updatedAt;
     delete binder._cloudPending;
     await persistLocalBinder(binder);
+    retryDelay = 15000;
     $('binderStatus').textContent = 'Backed up to your private cloud account. Local photo copies are kept for offline use.';
   } catch (error) {
     binder._cloudPending = true;
     await persistLocalBinder(binder);
     $('binderStatus').textContent = 'Saved locally; cloud backup will retry automatically. ' + (error?.message || '');
+    scheduleUploadRetry();
   }
 }
 function uid() { return globalThis.crypto?.randomUUID?.() || String(Date.now()) + Math.random().toString(36).slice(2); }
