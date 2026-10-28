@@ -45,7 +45,7 @@ create policy "Users read own and accepted friends profiles"
     user_id = (select auth.uid())
     or exists (
       select 1 from public.friendships f
-      where f.status = 'accepted'
+      where f.status in ('accepted','pending')
         and (
           (f.user_a = (select auth.uid()) and f.user_b = user_profiles.user_id)
           or (f.user_b = (select auth.uid()) and f.user_a = user_profiles.user_id)
@@ -221,12 +221,19 @@ security definer
 set search_path = public, pg_temp
 as $$
 begin
-  if old.status = 'accepted' and (tg_op = 'DELETE' or new.status <> 'accepted') then
+  if tg_op = 'DELETE' then
+    if old.status = 'accepted' then
+      delete from public.collection_shares
+      where (owner_id = old.user_a and friend_id = old.user_b)
+         or (owner_id = old.user_b and friend_id = old.user_a);
+    end if;
+    return old;
+  end if;
+  if old.status = 'accepted' and new.status <> 'accepted' then
     delete from public.collection_shares
     where (owner_id = old.user_a and friend_id = old.user_b)
        or (owner_id = old.user_b and friend_id = old.user_a);
   end if;
-  if tg_op = 'DELETE' then return old; end if;
   return new;
 end;
 $$;
