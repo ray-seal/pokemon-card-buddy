@@ -76,7 +76,7 @@ create or replace function public.guard_friendship_participants()
 returns trigger
 language plpgsql
 set search_path = public, pg_temp
-as $
+as $$
 begin
   if new.user_a <> old.user_a
      or new.user_b <> old.user_b then
@@ -88,7 +88,7 @@ begin
   end if;
   return new;
 end;
-$;
+$$;
 
 drop trigger if exists guard_friendship_participants_immutable on public.friendships;
 create trigger guard_friendship_participants_immutable
