@@ -91,6 +91,18 @@ export async function inspectCollectionSync(name, localCollection) {
   };
 }
 
+export async function loadCloudCollections() {
+  const client = await getClient();
+  const user = await currentUser();
+  if (!user) return [];
+  const { data, error } = await client.from('user_collections')
+    .select('id,name,collection_data,updated_at')
+    .eq('user_id', user.id)
+    .order('updated_at', { ascending: true });
+  if (error) throw error;
+  return data || [];
+}
+
 export async function syncCollection(name, localCollection) {
   const client = await getClient();
   const user = await currentUser();
