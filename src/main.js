@@ -2,7 +2,7 @@ import { POKEMON, REGIONS } from './data/pokemon.js';
 import { loadProfiles, createProfile, switchProfile, loadProfileCollection, saveProfileCollection, renameProfile, deleteProfile } from './storage.js';
 import { getStatus, setFlag, getStats } from './collection.js';
 import { applyView, FILTERS, SORTS } from './filter.js';
-import { signIn, signUp, signOut, currentUser, syncCollection, inspectCollectionSync, watchAuth, getUsername, saveUsername } from './cloud.js';
+import { signIn, signUp, signOut, currentUser, syncCollection, inspectCollectionSync, loadCloudCollections, watchAuth, getUsername, saveUsername } from './cloud.js';
 
 const activePokemon = POKEMON;
 let profiles = loadProfiles();
@@ -186,7 +186,11 @@ function showAccount(user) {
       accountUsername.textContent = user.email || 'Account';
       accountStatus.textContent = error?.message || 'Could not load username.';
     });
-    refreshSyncAvailability();
+    restoreCloudProfiles(user.id).catch((error) => {
+      if (activeUserId === user.id) {
+        accountStatus.textContent = 'Signed in, but cloud collections could not be restored: ' + (error?.message || 'please try refreshing.');
+      }
+    });
   }
 }
 
@@ -220,6 +224,47 @@ async function loadAccountUsername(user) {
   } finally {
     usernamePromptFor = null;
   }
+}
+
+async function restoreCloudProfiles(userId) {
+  const remoteCollections = await loadCloudCollections();
+  if (activeUserId !== userId) return;
+
+  const activeIdBeforeRestore = profiles.activeId;
+  for (const remote of remoteCollections) {
+    const name = String(remote.name || '').trim();
+    if (!name) continue;
+
+    let profile = Object.values(profiles.profiles).find((item) => item.name.toLowerCase() === name.toLowerCase());
+    if (!profile) {
+      profiles = createProfile(profiles, name);
+      profile = profiles.profiles[profiles.activeId];
+    }
+
+    const localData = loadProfileCollection(profile.id);
+    const remoteData = remote.collection_data || {};
+    const merged = { ...remoteData, ...localData };
+    for (const [pokemonId, flags] of Object.entries(remoteData)) {
+      const localFlags = localData[pokemonId] || {};
+      merged[pokemonId] = {
+        ...flags,
+        ...localFlags,
+        owned: Boolean(flags?.owned || localFlags.owned),
+        wanted: Boolean(flags?.wanted || localFlags.wanted),
+      };
+    }
+    saveProfileCollection(profile.id, merged);
+  }
+
+  if (activeUserId !== userId) return;
+  if (profiles.profiles[activeIdBeforeRestore]) {
+    profiles = switchProfile(profiles, activeIdBeforeRestore);
+  }
+  collection = loadProfileCollection(profiles.activeId);
+  renderProfiles();
+  renderStats();
+  renderList();
+  await refreshSyncAvailability();
 }
 
 let syncCheckSequence = 0;
