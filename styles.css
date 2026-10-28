@@ -272,3 +272,55 @@ main { max-width:54rem; margin:0 auto; padding:0 1rem 2rem; }
 .binder-choice-footer { display:flex; justify-content:flex-end; margin-top:.85rem; }
 .binder-choice-footer button { min-width:6rem; }
 @media (max-width:36rem) { .binder-choice-dialog { padding:1rem; } .binder-choice-options .binder-choice-button { min-height:3.25rem; } }
+
+
+/* Friends: text-only collection sharing, no image or binder surfaces. */
+.app-tabs button:disabled { opacity:.48; cursor:not-allowed; }
+#friendsSection { max-width:54rem; margin:0 auto; padding:0 1rem 2rem; }
+.friends-layout { display:grid; gap:.9rem; }
+.friends-card {
+  min-width:0; padding:1rem; border:1px solid #293b59; border-radius:1rem;
+  background:linear-gradient(145deg,#111a2b,#0c1220); box-shadow:0 12px 28px #0002;
+}
+.friends-card h2 { margin:.1rem 0 .45rem; font-size:1.12rem; }
+.friends-card h3 { margin:1.1rem 0 .5rem; font-size:.95rem; }
+.muted-note { color:var(--muted); font-size:.88rem; margin:.45rem 0 .7rem; }
+.friend-code-row, .friend-code-entry, .avatar-picker { display:grid; gap:.35rem; margin:.75rem 0; color:#c6d3eb; font-weight:650; }
+.friend-code-input { display:flex; gap:.45rem; }
+.friend-code-input input, .friend-code-entry input { width:100%; min-width:0; padding:.72rem .8rem; border:1px solid #354665; border-radius:.7rem; background:#090f1c; color:var(--fg); }
+.friend-code-input input { font-weight:800; letter-spacing:.12em; }
+.avatar-picker select { width:100%; }
+#sendFriendRequest { width:100%; margin:.2rem 0 .45rem; }
+.primary-button { border-color:#438fe8; background:linear-gradient(110deg,#1d5caa,#3d4fb0 62%,#6844a3); color:#fff; font-weight:750; }
+.secondary { background:#111a2b; }
+#friendsStatus { padding:.65rem .75rem; border:1px solid #293b59; border-radius:.7rem; background:#0b1322; }
+#friendsStatus.is-error { border-color:#a84460; color:#ffb5c4; }
+.friend-request, .friend-card { display:grid; gap:.65rem; padding:.75rem 0; border-bottom:1px solid #293650; }
+.friend-card.selected { background:#15223a; border-radius:.7rem; padding:.75rem; }
+.friend-person { display:flex; gap:.6rem; align-items:center; min-width:0; }
+.friend-person strong { overflow-wrap:anywhere; }
+.friend-avatar { display:grid; place-items:center; width:2.45rem; height:2.45rem; flex:0 0 2.45rem; border-radius:50%; background:#202d48; border:1px solid #3a4d70; font-size:1.2rem; }
+.friend-actions { display:flex; flex-wrap:wrap; gap:.45rem; }
+.friend-actions button { flex:1; min-width:6rem; }
+.share-friend { min-width:0; margin:.8rem 0; padding:.65rem .75rem; border:1px solid #2c3c59; border-radius:.8rem; }
+.share-friend legend { padding:0 .3rem; font-weight:800; }
+.share-option { display:flex; align-items:center; gap:.65rem; padding:.7rem .15rem; border-top:1px solid #25334d; cursor:pointer; }
+.share-option input { width:1.15rem; height:1.15rem; accent-color:var(--accent); flex:0 0 auto; }
+.share-option span { display:grid; gap:.12rem; min-width:0; }
+.share-option strong { overflow-wrap:anywhere; }
+.share-option small { color:var(--muted); font-size:.8rem; }
+.shared-collection { margin:.7rem 0; padding:.75rem; border:1px solid #2c3c59; border-radius:.8rem; background:#0d1525; }
+.shared-collection summary { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:.35rem .7rem; cursor:pointer; }
+.shared-collection summary strong { overflow-wrap:anywhere; }
+.shared-collection summary .muted-note { margin:0; }
+.shared-pokemon-list { list-style:none; padding:0; margin:.65rem 0 0; display:grid; gap:.35rem; }
+.shared-pokemon-list li { display:flex; align-items:center; gap:.45rem; padding:.4rem .45rem; border-radius:.5rem; background:#121d30; min-width:0; }
+.dex-number { color:var(--muted); font-variant-numeric:tabular-nums; font-size:.8rem; }
+.shared-pokemon-name { flex:1; min-width:0; overflow-wrap:anywhere; }
+.mini-tag { font-size:.72rem; border-radius:99px; padding:.16rem .42rem; white-space:nowrap; }
+.owned-tag { color:#72f0c4; background:#102d36; }
+.wanted-tag { color:#c6b3ff; background:#2a2145; }
+@media (min-width: 760px) {
+  .friends-layout { grid-template-columns:minmax(0,1fr) minmax(0,1fr); align-items:start; }
+  .friend-profile-card { grid-column:1 / -1; }
+}
