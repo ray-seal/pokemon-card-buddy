@@ -333,7 +333,6 @@ avatarSelect.addEventListener('change', async () => {
 
 async function setSignedIn(user) {
   signedIn = Boolean(user);
-  tab.disabled = !signedIn;
   if (!signedIn) {
     hub = null;
     codeDisplay.value = '';
@@ -354,7 +353,7 @@ async function boot() {
     const client = createClient('https://ojnpdosscasvolfhsreh.supabase.co', 'sb_publishable_-I4mu6G34EOY6BxGuDZU6w_cmG-xn9T', {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
     });
-    client.auth.onAuthStateChange((_event, session) => { setSignedIn(session?.user || null); });
+    client.auth.onAuthStateChange((_event, session) => { queueMicrotask(() => setSignedIn(session?.user || null)); });
     const { data } = await client.auth.getUser();
     await setSignedIn(data.user || null);
   } catch {
