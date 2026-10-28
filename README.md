@@ -32,3 +32,12 @@ In Authentication settings, set the Site URL to the deployed testing URL and add
 ### Database migration
 
 The initial schema is documented at `supabase/migrations/202610270001_initial_schema.sql`. The migration was applied directly to the new Supabase project; the SQL file is kept in the repo so the setup is reproducible.
+
+
+### Friends and collection-only sharing (testing branch)
+
+The Friends tab uses a private 12-character friend code and accepted friend requests. There is no public user directory. Users can choose a preset avatar, then grant each accepted friend access to specific synced Pokédex collections. Sharing is off by default.
+
+Only `user_collections` checklist rows can be shared. The app renders Pokémon names from its built-in Pokédex data; it does not render user-supplied images in friend profiles. Binder pages, binder metadata and the private `binder-photos` Storage bucket are not shared or changed by this feature.
+
+Before testing this branch against Supabase, apply `supabase/migrations/202610280001_friends_collection_sharing.sql` after the existing migrations. This adds the friend-code lookup RPC, friend relationships, per-collection grants, rate limiting for friend-code attempts, and row-level security. Do not merge or launch this feature until the migration has been applied and tested with two separate test accounts, including verifying that an unshared collection and every binder/photo remain inaccessible to the other account.
