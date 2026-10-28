@@ -300,8 +300,24 @@ watchAuth(showAccount).catch(() => { /* Local checklist remains usable offline. 
 currentUser().then(showAccount).catch(() => showAccount(null));
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+  // Reload once when an updated worker takes control, so the app switches to
+  // the new cached shell without requiring users to reinstall.
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  let refreshingForUpdate = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || refreshingForUpdate) return;
+    refreshingForUpdate = true;
+    window.location.reload();
+  });
+
+  window.addEventListener('load', async () => {
+    try {
+      const registration = await navigator.serviceWorker.register('sw.js', { updateViaCache: 'none' });
+      // Ask for a fresh worker check whenever the installed app is opened.
+      await registration.update();
+    } catch {
+      // The cached app remains usable if the update check is offline or fails.
+    }
   });
 }
 
