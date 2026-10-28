@@ -172,7 +172,7 @@ function showAccount(user) {
   const signedIn = Boolean(user);
   accountFields.hidden = signedIn;
   accountSummary.hidden = !signedIn;
-  syncButton.hidden = true;
+  syncButton.hidden = !signedIn;
   syncButton.disabled = !signedIn;
   if (!signedIn) {
     activeUserId = null;
