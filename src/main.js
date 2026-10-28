@@ -274,16 +274,16 @@ async function refreshSyncAvailability() {
   if (!userId) { syncButton.hidden = true; return; }
   syncButton.hidden = true;
   try {
-    const status = await inspectCollectionSync(profiles.profiles[profiles.activeId].name, collection);
+    const entries = Object.values(profiles.profiles);
+    const statuses = await Promise.all(entries.map((profile) =>
+      inspectCollectionSync(profile.name, loadProfileCollection(profile.id))
+    ));
     if (sequence !== syncCheckSequence || activeUserId !== userId) return;
-    syncButton.hidden = !status.needsSync;
-    if (status.needsSync) {
-      accountStatus.textContent = status.exists
-        ? 'Your local Pokédex checklist differs from the cloud copy. Sync is available.'
-        : 'This collection has not been backed up to your account yet.';
-    } else {
-      accountStatus.textContent = 'Pokédex checklist is up to date. Binder photos and card inventory are not synced yet.';
-    }
+    const pending = statuses.filter((status) => status.needsSync).length;
+    syncButton.hidden = pending === 0;
+    accountStatus.textContent = pending
+      ? `${pending} collection${pending === 1 ? '' : 's'} need syncing. Choose Sync data to back up all your collections.`
+      : 'All collection checklists are up to date. Binder photos and card inventory sync separately.';
   } catch (error) {
     if (sequence !== syncCheckSequence || activeUserId !== userId) return;
     syncButton.hidden = false;
@@ -326,20 +326,31 @@ signOutButton.addEventListener('click', async () => {
   } catch (error) { accountStatus.textContent = error?.message || 'Could not sign out.'; }
 });
 syncButton.addEventListener('click', async () => {
+  const userId = activeUserId;
+  if (!userId) return;
   syncButton.disabled = true;
-  accountStatus.textContent = 'Syncing your Pokédex checklist…';
+  accountStatus.textContent = 'Syncing all your collection checklists…';
   try {
-    const result = await syncCollection(profiles.profiles[profiles.activeId].name, collection);
-    collection = result.collection;
-    saveProfileCollection(profiles.activeId, collection);
-    renderStats(); renderList();
-    accountStatus.textContent = result.direction === 'uploaded'
-      ? 'Pokédex checklist backed up. Binder photos and card inventory are not synced yet.'
-      : 'Pokédex checklist synced. Binder photos and card inventory are not synced yet.';
-    await refreshSyncAvailability();
+    const entries = Object.values(profiles.profiles);
+    for (const profile of entries) {
+      if (activeUserId !== userId) throw new Error('Account changed during sync. Please sign in again.');
+      const localData = loadProfileCollection(profile.id);
+      const result = await syncCollection(profile.name, localData);
+      saveProfileCollection(profile.id, result.collection);
+      if (profile.id === profiles.activeId) collection = result.collection;
+    }
+    renderStats();
+    renderList();
+    await restoreCloudProfiles(userId);
+    if (activeUserId === userId) {
+      accountStatus.textContent = `Synced ${entries.length} collection checklist${entries.length === 1 ? '' : 's'} to your account.`;
+    }
   } catch (error) {
     accountStatus.textContent = error?.message || 'Sync failed. Your local data has not been deleted.';
-  } finally { syncButton.disabled = false; }
+  } finally {
+    syncButton.disabled = false;
+    await refreshSyncAvailability();
+  }
 });
 watchAuth(showAccount).catch(() => { /* Local checklist remains usable offline. */ });
 currentUser().then(showAccount).catch(() => showAccount(null));
