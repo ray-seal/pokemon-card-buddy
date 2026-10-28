@@ -11,6 +11,8 @@ let turning = false;
 let touchStartX = null;
 let draggedSlot = null;
 let edgeTurnTimer = null;
+let pagePhotosToLoad = 0;
+let pagePhotosLoaded = 0;
 const ACTIVE_BINDER_KEY = 'pcb.binder.activeId';
 function pagePositionKey(id) { return 'pcb.binder.page.' + id; }
 function rememberPosition() {
@@ -229,12 +231,32 @@ function setBinderLoading(title, message, progress = 8) {
   $('binderLoadingProgress').value = Math.max(0, Math.min(100, progress));
   panel.hidden = false;
 }
+function beginBinderPhotoProgress(total) {
+  pagePhotosToLoad = total;
+  pagePhotosLoaded = 0;
+  if (!total) return;
+  setBinderLoading('Loading card photos…', `Preparing 0 of ${total} photos on this page. Your saved collection is safe.`, 0);
+}
+function markBinderPhotoLoaded() {
+  if (!pagePhotosToLoad) return;
+  pagePhotosLoaded = Math.min(pagePhotosToLoad, pagePhotosLoaded + 1);
+  const percent = Math.round((pagePhotosLoaded / pagePhotosToLoad) * 100);
+  setBinderLoading(
+    pagePhotosLoaded >= pagePhotosToLoad ? 'Binder ready!' : 'Loading card photos…',
+    pagePhotosLoaded >= pagePhotosToLoad
+      ? 'All photos on this page have finished loading.'
+      : `Preparing ${pagePhotosLoaded} of ${pagePhotosToLoad} photos on this page. Your saved collection is safe.`,
+    percent
+  );
+  if (pagePhotosLoaded >= pagePhotosToLoad) window.setTimeout(() => { if (pagePhotosLoaded >= pagePhotosToLoad) $('binderLoading').hidden = true; }, 900);
+}
 function finishBinderLoading() {
+  if (pagePhotosToLoad) return;
   const panel = $('binderLoading');
   if (!panel) return;
   $('binderLoadingProgress').value = 100;
   $('binderLoadingTitle').textContent = 'Binder ready!';
-  $('binderLoadingMessage').textContent = 'Your collection is here. Card photos may finish appearing one by one.';
+  $('binderLoadingMessage').textContent = 'Your saved collection is ready.';
   window.setTimeout(() => { panel.hidden = true; }, 900);
 }
 function activeBinder() { return binders.find((b) => b.id === activeId); }
@@ -246,12 +268,15 @@ function slotCard(slot, index) {
   if (slot?.type === 'card' && (slot.data || slot.photoPath || slot.photoUrl)) {
     const img = document.createElement('img');
     img.alt = slot.name || 'Collection card';
+    img.addEventListener('load', markBinderPhotoLoaded, { once: true });
+    img.addEventListener('error', markBinderPhotoLoaded, { once: true });
     if (slot.data) img.src = slot.data;
     else if (slot.photoUrl) img.src = slot.photoUrl;
     else if (slot.photoPath) {
       img.alt = (slot.name || 'Collection card') + ' (loading photo)';
       getBinderPhotoUrl(slot.photoPath).then((url) => { img.src = url; }).catch(() => {
         img.alt = (slot.name || 'Collection card') + ' (photo unavailable offline)';
+        markBinderPhotoLoaded();
       });
     }
     el.append(img);
@@ -321,6 +346,7 @@ function render() {
   if (jump) jump.value = String(pageIndex);
   rememberPosition();
   const page = binder.pages[pageIndex];
+  beginBinderPhotoProgress(page.slots.filter((slot) => slot?.type === 'card' && (slot.data || slot.photoPath || slot.photoUrl)).length);
   $('binderPages').replaceChildren(...page.slots.map((slot, i) => slotCard(slot, i)));
   $('prevBinderPage').disabled = pageIndex === 0;
   $('nextBinderPage').disabled = pageIndex >= binder.pages.length - 1;
