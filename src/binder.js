@@ -1,4 +1,4 @@
-import { currentUser, saveCloudBinder, loadCloudBinders, getBinderPhotoUrl, deleteCloudBinder } from './cloud.js';
+import { currentUser, watchAuth, saveCloudBinder, loadCloudBinders, getBinderPhotoUrl, deleteCloudBinder } from './cloud.js';
 const DB_NAME = 'pokemon-card-buddy-binders';
 const DB_VERSION = 1;
 const STORE = 'binders';
@@ -11,6 +11,60 @@ let turning = false;
 let touchStartX = null;
 let draggedSlot = null;
 let edgeTurnTimer = null;
+const ACTIVE_BINDER_KEY = 'pcb.binder.activeId';
+function pagePositionKey(id) { return 'pcb.binder.page.' + id; }
+function rememberPosition() {
+  try {
+    if (activeId) {
+      localStorage.setItem(ACTIVE_BINDER_KEY, activeId);
+      localStorage.setItem(pagePositionKey(activeId), String(pageIndex));
+    }
+  } catch { /* Position memory is optional; binder data remains in IndexedDB. */ }
+}
+function restorePagePosition(id, binder) {
+  try {
+    const saved = Number.parseInt(localStorage.getItem(pagePositionKey(id)) || '0', 10);
+    return Math.max(0, Math.min(Number.isFinite(saved) ? saved : 0, Math.max(0, (binder?.pages?.length || 1) - 1)));
+  } catch { return 0; }
+}
+function mergeLocalPhotos(remote, local) {
+  if (!remote || !local) return remote;
+  const localPages = new Map((local.pages || []).map((page) => [page.id, page]));
+  for (const page of remote.pages || []) {
+    const localPage = localPages.get(page.id);
+    if (!localPage) continue;
+    for (let i = 0; i < (page.slots || []).length; i++) {
+      const remoteSlot = page.slots[i];
+      const localSlot = localPage.slots?.[i];
+      if (remoteSlot?.type === 'card' && localSlot?.type === 'card' && localSlot.data) remoteSlot.data = localSlot.data;
+    }
+  }
+  return remote;
+}
+function mergeCloudPathsIntoLocal(local, cloud) {
+  for (const [pageNumber, cloudPage] of (cloud.pages || []).entries()) {
+    const localPage = local.pages.find((page) => page.id === cloudPage.id) || local.pages[pageNumber];
+    if (!localPage) continue;
+    for (const [slotNumber, cloudSlot] of (cloudPage.slots || []).entries()) {
+      const localSlot = localPage.slots?.[slotNumber];
+      if (localSlot && cloudSlot?.photoPath) localSlot.photoPath = cloudSlot.photoPath;
+    }
+  }
+}
+let retryingUploads = false;
+async function retryPendingUploads() {
+  if (retryingUploads || !navigator.onLine) return;
+  retryingUploads = true;
+  try {
+    const user = await currentUser();
+    if (!user) return;
+    for (const binder of binders) {
+      const pendingPhoto = (binder.pages || []).some((page) => (page.slots || []).some((slot) => slot?.type === 'card' && slot.data && !slot.photoPath));
+      if (binder._cloudPending || pendingPhoto || !binder.cloudId) await saveBinder(binder);
+    }
+  } catch { /* A later online, sign-in, or app-resume event will retry. */ }
+  finally { retryingUploads = false; }
+}
 
 function openDb() {
   return new Promise((resolve, reject) => {
@@ -37,22 +91,23 @@ function persistLocalBinder(binder) {
 async function saveBinder(binder) {
   await persistLocalBinder(binder);
   try {
+    if (!navigator.onLine) throw new Error('No internet connection. The photo is queued on this device.');
     const user = await currentUser();
     if (!user) {
-      $('binderStatus').textContent = 'Binder is saved on this device. Sign in to back up pages and photos to the cloud.';
+      $('binderStatus').textContent = 'Saved on this device. Sign in to enable automatic private cloud backup.';
       return;
     }
     const synced = await saveCloudBinder(binder);
-    binder.pages = synced.pages;
+    mergeCloudPathsIntoLocal(binder, synced);
     binder.cloudId = synced.cloudId;
     binder.updatedAt = synced.updatedAt;
     delete binder._cloudPending;
     await persistLocalBinder(binder);
-    $('binderStatus').textContent = 'Binder pages and photos are backed up to your private cloud account.';
+    $('binderStatus').textContent = 'Backed up to your private cloud account. Local photo copies are kept for offline use.';
   } catch (error) {
     binder._cloudPending = true;
     await persistLocalBinder(binder);
-    $('binderStatus').textContent = 'Saved on this device, but cloud backup failed: ' + (error?.message || 'Please try again when online.');
+    $('binderStatus').textContent = 'Saved locally; cloud backup will retry automatically. ' + (error?.message || '');
   }
 }
 function uid() { return globalThis.crypto?.randomUUID?.() || String(Date.now()) + Math.random().toString(36).slice(2); }
@@ -228,8 +283,12 @@ function render() {
   $('binderName').textContent = binder?.name || 'My Binder';
   $('binderPageCount').textContent = binder ? `Page ${pageIndex + 1} of ${binder.pages.length}` : 'Create a binder to get started';
   $('binderPages').replaceChildren();
+  const jump = $('binderPageJump');
+  if (jump) jump.replaceChildren(...(binder?.pages || []).map((page, i) => new Option('Page ' + (i + 1), String(i))));
   if (!binder) return;
   pageIndex = Math.max(0, Math.min(pageIndex, binder.pages.length - 1));
+  if (jump) jump.value = String(pageIndex);
+  rememberPosition();
   const page = binder.pages[pageIndex];
   $('binderPages').replaceChildren(...page.slots.map((slot, i) => slotCard(slot, i)));
   $('prevBinderPage').disabled = pageIndex === 0;
@@ -314,7 +373,7 @@ async function init() {
       const remoteIds = new Set(remoteBinders.map((item) => item.id));
       binders = remoteBinders.map((remote) => {
         const local = localById.get(remote.id);
-        return local?._cloudPending ? local : remote;
+        return local?._cloudPending ? local : mergeLocalPhotos(remote, local);
       }).concat(localBinders.filter((item) => !remoteIds.has(item.id)));
       $('binderStatus').textContent = 'Cloud binders loaded. Uploading any device-only changes…';
     }
@@ -324,7 +383,12 @@ async function init() {
   if (!binders.length) {
     const b = { id: uid(), name: 'My Binder', pages: [newPage()], collectionItems: [] };
     binders.push(b); activeId = b.id; await persistLocalBinder(b);
-  } else activeId = binders[0].id;
+  } else {
+    let rememberedId = null;
+    try { rememberedId = localStorage.getItem(ACTIVE_BINDER_KEY); } catch {}
+    activeId = binders.some((item) => item.id === rememberedId) ? rememberedId : binders[0].id;
+    pageIndex = restorePagePosition(activeId, activeBinder());
+  }
   for (const binder of binders) {
     ensureInventory(binder);
     await persistLocalBinder(binder);
@@ -332,7 +396,7 @@ async function init() {
       const user = await currentUser();
       if (user) {
         const synced = await saveCloudBinder(binder);
-        binder.pages = synced.pages;
+        mergeCloudPathsIntoLocal(binder, synced);
         binder.cloudId = synced.cloudId;
         binder.updatedAt = synced.updatedAt;
         delete binder._cloudPending;
@@ -349,7 +413,14 @@ async function init() {
     const b = { id: uid(), name: name.trim().slice(0, 50), pages: [newPage()], collectionItems: [] };
     binders.push(b); activeId = b.id; pageIndex = 0; await saveBinder(b); render();
   });
-  $('binderSelect').addEventListener('change', () => { activeId = $('binderSelect').value; pageIndex = 0; render(); });
+  $('binderSelect').addEventListener('change', () => { activeId = $('binderSelect').value; pageIndex = restorePagePosition(activeId, activeBinder()); render(); });
+  $('binderPageJump')?.addEventListener('change', () => {
+    const value = Number.parseInt($('binderPageJump').value, 10);
+    if (Number.isInteger(value)) { pageIndex = value; render(); }
+  });
+  window.addEventListener('online', retryPendingUploads);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') retryPendingUploads(); });
+  watchAuth(() => retryPendingUploads()).catch(() => {});
   $('renameBinder').addEventListener('click', async () => {
     const b = activeBinder(); if (!b) return;
     const name = window.prompt('Rename binder:', b.name); if (!name?.trim()) return;
@@ -398,5 +469,6 @@ async function init() {
     if (Math.abs(dx) > 55) turn(dx < 0 ? 1 : -1);
   }, { passive: true });
   render();
+  retryPendingUploads();
 }
 init();
