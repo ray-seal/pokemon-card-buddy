@@ -94,6 +94,7 @@ drop trigger if exists guard_friendship_participants_immutable on public.friends
 create trigger guard_friendship_participants_immutable
   before update on public.friendships
   for each row execute function public.guard_friendship_participants();
+revoke all on function public.guard_friendship_participants() from public, anon, authenticated;
 
 create policy "Participants can remove friendship or request"
   on public.friendships for delete to authenticated
@@ -176,7 +177,7 @@ begin
 end;
 $$;
 
-revoke all on function public.request_friend_by_code(text) from public;
+revoke all on function public.request_friend_by_code(text) from public, anon, authenticated;
 grant execute on function public.request_friend_by_code(text) to authenticated;
 
 create table if not exists public.collection_shares (
@@ -267,3 +268,4 @@ drop trigger if exists purge_shares_when_friendship_ends on public.friendships;
 create trigger purge_shares_when_friendship_ends
   before update of status or delete on public.friendships
   for each row execute function public.purge_friend_collection_shares();
+revoke all on function public.purge_friend_collection_shares() from public, anon, authenticated;
