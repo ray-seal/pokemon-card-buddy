@@ -57,7 +57,7 @@
       <label>Sort <select id="sort"></select></label>
     </div>
   </section>
-  <nav class="app-tabs" aria-label="App sections"><button id="showCollection" class="active" type="button">Pokédex</button><button id="showBinder" type="button">Virtual Binder</button></nav>
+  <nav class="app-tabs" aria-label="App sections"><button id="showCollection" class="active" type="button">Pokédex</button><button id="showBinder" type="button">Virtual Binder</button><button id="showFriends" type="button" disabled>Friends</button></nav>
   <section id="collectionSection">
   <main>
     <ul id="list" class="list"></ul>
@@ -89,7 +89,40 @@
       <div class="binder-choice-footer"><button id="binderChoiceCancel" type="button" class="secondary">Cancel</button></div>
     </dialog>
   </section>
+  <section id="friendsSection" hidden aria-label="Friends and collection sharing">
+    <div class="friends-layout">
+      <section class="friends-card">
+        <h2>Friends</h2>
+        <p class="muted-note">Add people with a private friend code. There is no public user directory, and requests must be accepted.</p>
+        <div class="friend-code-row">
+          <label for="myFriendCode">Your friend code</label>
+          <div class="friend-code-input"><input id="myFriendCode" readonly aria-label="Your friend code"><button id="copyFriendCode" type="button">Copy code</button></div>
+        </div>
+        <label class="avatar-picker" for="myAvatar">Your preset avatar <select id="myAvatar"></select></label>
+        <label class="friend-code-entry" for="friendCodeInput">Add a friend by code
+          <input id="friendCodeInput" maxlength="12" autocomplete="off" autocapitalize="characters" placeholder="12-character code">
+        </label>
+        <button id="sendFriendRequest" class="primary-button" type="button">Send friend request</button>
+        <p id="friendsStatus" class="note" role="status" aria-live="polite">Sign in to use Friends.</p>
+        <h3>Incoming requests</h3>
+        <div id="incomingRequests"></div>
+        <div id="outgoingRequests"></div>
+        <h3>Your friends</h3>
+        <div id="friendsList"></div>
+      </section>
+      <section class="friends-card">
+        <h2>Collection permissions</h2>
+        <p class="muted-note">Sharing is off by default. Tick only the synced collections each friend may view. Permission changes apply immediately.</p>
+        <div id="shareControls"></div>
+      </section>
+      <section class="friends-card friend-profile-card">
+        <h2>Friend profile</h2>
+        <p class="muted-note">Only the Pokémon checklist appears here. Binder pages, card photos and other uploaded images remain private to their owner.</p>
+        <div id="friendProfile"><p class="muted-note">Choose a friend and tap “View collections”.</p></div>
+      </section>
+    </div>
+  </section>
   <script type="module" src="src/main.js"></script>
-  <script type="module" src="src/binder.js"></script>
+  <script type="module" src="src/binder.js"></script>\n  <script type="module" src="src/friends.js"></script>
 </body>
 </html>
