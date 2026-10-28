@@ -169,7 +169,7 @@ export async function saveCloudBinder(localBinder) {
       const safeBinderId = String(binder.id).replace(/[^A-Za-z0-9_-]/g, '_');
       const safeItemId = String(slot.collectionItemId || (pageIndex + '-' + slotIndex)).replace(/[^A-Za-z0-9_-]/g, '_');
       const targetPath = user.id + '/' + safeBinderId + '/' + safeItemId + '.jpg';
-      if (slot.data && slot.data.startsWith('data:')) {
+      if (slot.data && slot.data.startsWith('data:') && slot.photoPath !== targetPath) {
         const response = await fetch(slot.data);
         const blob = await response.blob();
         const { error: uploadError } = await client.storage.from('binder-photos').upload(targetPath, blob, {
@@ -177,6 +177,9 @@ export async function saveCloudBinder(localBinder) {
         });
         if (uploadError) throw uploadError;
         slot.photoPath = targetPath;
+        delete slot.data;
+      } else if (slot.data && slot.photoPath === targetPath) {
+        // Already uploaded. Keep the local copy in IndexedDB, but not in cloud JSON.
         delete slot.data;
       } else if (slot.photoPath && slot.photoPath !== targetPath) {
         const { data: oldPhoto, error: downloadError } = await client.storage.from('binder-photos').download(slot.photoPath);
