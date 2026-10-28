@@ -70,6 +70,28 @@ create policy "Recipients can answer pending friend requests"
     and (select auth.uid()) in (user_a, user_b)
   );
 
+-- RLS UPDATE checks the new row but cannot compare it with OLD values.
+-- Keep the requested pair and original requester immutable when a recipient responds.
+create or replace function public.guard_friendship_participants()
+returns trigger
+language plpgsql
+set search_path = public, pg_temp
+as $
+begin
+  if new.user_a <> old.user_a
+     or new.user_b <> old.user_b
+     or new.requested_by <> old.requested_by then
+    raise exception 'Friend request participants cannot be changed';
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists guard_friendship_participants_immutable on public.friendships;
+create trigger guard_friendship_participants_immutable
+  before update on public.friendships
+  for each row execute function public.guard_friendship_participants();
+
 create policy "Participants can remove friendship or request"
   on public.friendships for delete to authenticated
   using ((select auth.uid()) in (user_a, user_b));
