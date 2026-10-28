@@ -1,3 +1,4 @@
+import { currentUser, watchAuth, saveCloudBinder, loadCloudBinders, getBinderPhotoUrl, deleteCloudBinder } from './cloud.js';
 const DB_NAME = 'pokemon-card-buddy-binders';
 const DB_VERSION = 1;
 const STORE = 'binders';
@@ -10,6 +11,44 @@ let turning = false;
 let touchStartX = null;
 let draggedSlot = null;
 let edgeTurnTimer = null;
+const ACTIVE_BINDER_KEY = 'pcb.binder.activeId';
+function pagePositionKey(id) { return 'pcb.binder.page.' + id; }
+function rememberPosition() {
+  try { if (activeId) { localStorage.setItem(ACTIVE_BINDER_KEY, activeId); localStorage.setItem(pagePositionKey(activeId), String(pageIndex)); } } catch {}
+}
+function restorePagePosition(id, binder) {
+  try {
+    const saved = Number.parseInt(localStorage.getItem(pagePositionKey(id)) || '0', 10);
+    return Math.max(0, Math.min(Number.isFinite(saved) ? saved : 0, Math.max(0, (binder?.pages?.length || 1) - 1)));
+  } catch { return 0; }
+}
+function mergeLocalPhotos(remote, local) {
+  if (!remote || !local) return remote;
+  const localPages = new Map((local.pages || []).map((page) => [page.id, page]));
+  for (const page of remote.pages || []) {
+    const localPage = localPages.get(page.id);
+    if (!localPage) continue;
+    for (let i = 0; i < (page.slots || []).length; i++) {
+      const rs = page.slots[i], ls = localPage.slots?.[i];
+      if (rs?.type === 'card' && ls?.type === 'card' && ls.data) rs.data = ls.data;
+    }
+  }
+  return remote;
+}
+let retryingUploads = false;
+async function retryPendingUploads() {
+  if (retryingUploads || !navigator.onLine) return;
+  retryingUploads = true;
+  try {
+    const user = await currentUser();
+    if (!user) return;
+    for (const binder of binders) {
+      const pendingPhoto = (binder.pages || []).some((page) => (page.slots || []).some((slot) => slot?.type === 'card' && slot.data && !slot.photoPath));
+      if (binder._cloudPending || pendingPhoto || !binder.cloudId) await saveBinder(binder);
+    }
+  } catch {}
+  finally { retryingUploads = false; }
+}
 
 function openDb() {
   return new Promise((resolve, reject) => {
@@ -26,12 +65,41 @@ function allBinders() {
     req.onerror = () => reject(req.error);
   });
 }
-function saveBinder(binder) {
+function persistLocalBinder(binder) {
   return new Promise((resolve, reject) => {
     const req = db.transaction(STORE, 'readwrite').objectStore(STORE).put(binder);
     req.onsuccess = resolve;
     req.onerror = () => reject(req.error);
   });
+}
+async function saveBinder(binder) {
+  await persistLocalBinder(binder);
+  try {
+    if (!navigator.onLine) throw new Error('No internet connection. Photo queued on this device.');
+    const user = await currentUser();
+    if (!user) {
+      $('binderStatus').textContent = 'Saved on this device. Sign in to enable automatic private cloud backup.';
+      return;
+    }
+    const synced = await saveCloudBinder(binder);
+    for (const [pageNumber, cloudPage] of (synced.pages || []).entries()) {
+      const localPage = binder.pages.find((page) => page.id === cloudPage.id) || binder.pages[pageNumber];
+      if (!localPage) continue;
+      for (const [slotNumber, cloudSlot] of (cloudPage.slots || []).entries()) {
+        const localSlot = localPage.slots?.[slotNumber];
+        if (localSlot && cloudSlot?.photoPath) localSlot.photoPath = cloudSlot.photoPath;
+      }
+    }
+    binder.cloudId = synced.cloudId;
+    binder.updatedAt = synced.updatedAt;
+    delete binder._cloudPending;
+    await persistLocalBinder(binder);
+    $('binderStatus').textContent = 'Backed up to your private cloud account. Local photo copies are kept for offline use.';
+  } catch (error) {
+    binder._cloudPending = true;
+    await persistLocalBinder(binder);
+    $('binderStatus').textContent = 'Saved locally; cloud backup will retry automatically. ' + (error?.message || '');
+  }
 }
 function uid() { return globalThis.crypto?.randomUUID?.() || String(Date.now()) + Math.random().toString(36).slice(2); }
 function newPage() { return { id: uid(), slots: Array(9).fill(null) }; }
@@ -96,10 +164,12 @@ function slotCard(slot, index) {
   el.type = 'button';
   el.className = 'binder-slot' + (slot?.type === 'wanted' ? ' wanted-slot' : '');
   el.dataset.slot = index;
-  if (slot?.type === 'card' && slot.data) {
+  if (slot?.type === 'card' && (slot.data || slot.photoPath || slot.photoUrl)) {
     const img = document.createElement('img');
-    img.src = slot.data;
     img.alt = slot.name || 'Collection card';
+    if (slot.data) img.src = slot.data;
+    else if (slot.photoUrl) img.src = slot.photoUrl;
+    else if (slot.photoPath) getBinderPhotoUrl(slot.photoPath).then((url) => { img.src = url; }).catch(() => { img.alt = (slot.name || 'Collection card') + ' (photo unavailable offline)'; });
     el.append(img);
     const label = document.createElement('span');
     label.className = 'slot-caption';
@@ -160,8 +230,12 @@ function render() {
   $('binderName').textContent = binder?.name || 'My Binder';
   $('binderPageCount').textContent = binder ? `Page ${pageIndex + 1} of ${binder.pages.length}` : 'Create a binder to get started';
   $('binderPages').replaceChildren();
+  const jump = $('binderPageJump');
+  if (jump) jump.replaceChildren(...(binder?.pages || []).map((page, i) => new Option('Page ' + (i + 1), String(i))));
   if (!binder) return;
   pageIndex = Math.max(0, Math.min(pageIndex, binder.pages.length - 1));
+  if (jump) jump.value = String(pageIndex);
+  rememberPosition();
   const page = binder.pages[pageIndex];
   $('binderPages').replaceChildren(...page.slots.map((slot, i) => slotCard(slot, i)));
   $('prevBinderPage').disabled = pageIndex === 0;
@@ -234,16 +308,42 @@ async function init() {
   if (!section) return;
   try { db = await openDb(); binders = await allBinders(); }
   catch { $('binderStatus').textContent = 'Local photo storage is unavailable in this browser.'; return; }
+  try {
+    const user = await currentUser();
+    if (user) {
+      const localBinders = binders;
+      const remoteBinders = await loadCloudBinders();
+      const localById = new Map(localBinders.map((item) => [item.id, item]));
+      const remoteIds = new Set(remoteBinders.map((item) => item.id));
+      binders = remoteBinders.map((remote) => {
+        const local = localById.get(remote.id);
+        return local?._cloudPending ? local : mergeLocalPhotos(remote, local);
+      }).concat(localBinders.filter((item) => !remoteIds.has(item.id)));
+      $('binderStatus').textContent = 'Cloud binders loaded. Checking for photos waiting to upload…';
+    }
+  } catch (error) {
+    $('binderStatus').textContent = 'Could not load cloud binders. Local copies are preserved: ' + (error?.message || 'check your connection.');
+  }
   if (!binders.length) {
     const b = { id: uid(), name: 'My Binder', pages: [newPage()], collectionItems: [] };
-    binders.push(b); activeId = b.id; await saveBinder(b);
-  } else activeId = binders[0].id;\n  for (const binder of binders) { ensureInventory(binder); await saveBinder(binder); }
+    binders.push(b); activeId = b.id; await persistLocalBinder(b);
+  } else {
+    let rememberedId = null;
+    try { rememberedId = localStorage.getItem(ACTIVE_BINDER_KEY); } catch {}
+    activeId = binders.some((item) => item.id === rememberedId) ? rememberedId : binders[0].id;
+    pageIndex = restorePagePosition(activeId, activeBinder());
+  }
+  for (const binder of binders) { ensureInventory(binder); await persistLocalBinder(binder); }
   $('newBinder').addEventListener('click', async () => {
     const name = window.prompt('Name this binder:'); if (!name?.trim()) return;
     const b = { id: uid(), name: name.trim().slice(0, 50), pages: [newPage()], collectionItems: [] };
     binders.push(b); activeId = b.id; pageIndex = 0; await saveBinder(b); render();
   });
-  $('binderSelect').addEventListener('change', () => { activeId = $('binderSelect').value; pageIndex = 0; render(); });
+  $('binderSelect').addEventListener('change', () => { activeId = $('binderSelect').value; pageIndex = restorePagePosition(activeId, activeBinder()); render(); });
+  $('binderPageJump')?.addEventListener('change', () => { const value = Number.parseInt($('binderPageJump').value, 10); if (Number.isInteger(value)) { pageIndex = value; render(); } });
+  window.addEventListener('online', retryPendingUploads);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') retryPendingUploads(); });
+  watchAuth(() => retryPendingUploads()).catch(() => {});
   $('renameBinder').addEventListener('click', async () => {
     const b = activeBinder(); if (!b) return;
     const name = window.prompt('Rename binder:', b.name); if (!name?.trim()) return;
@@ -290,5 +390,6 @@ async function init() {
     if (Math.abs(dx) > 55) turn(dx < 0 ? 1 : -1);
   }, { passive: true });
   render();
+  retryPendingUploads();
 }
 init();
