@@ -421,7 +421,11 @@ async function init() {
   if (!section) return;
   setBinderLoading('Preparing your binder…', 'Opening your saved collection. Your cards are not being deleted.', 8);
   try { db = await openDb(); binders = await allBinders(); setBinderLoading('Loading your saved cards…', 'Your on-device copy is ready. Checking for cloud updates next.', 28); }
-  catch { $('binderStatus').textContent = 'Local binder storage is unavailable in this browser.'; return; }
+  catch {
+    $('binderStatus').textContent = 'Local binder storage is unavailable in this browser.';
+    setBinderLoading('Could not open the saved binder', 'No collection changes were made. Please close and reopen the app, then try again.', 100);
+    return;
+  }
   try {
     const user = await currentUser();
     if (user) {
