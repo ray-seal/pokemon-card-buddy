@@ -272,7 +272,9 @@ async function refreshSyncAvailability() {
   const sequence = ++syncCheckSequence;
   const userId = activeUserId;
   if (!userId) { syncButton.hidden = true; return; }
-  syncButton.hidden = true;
+  // Keep the sync action visible whenever the user is signed in.
+  // Status checks inform the message, but must never gate access to syncing.
+  syncButton.hidden = false;
   try {
     const entries = Object.values(profiles.profiles);
     const statuses = await Promise.all(entries.map((profile) =>
@@ -280,14 +282,13 @@ async function refreshSyncAvailability() {
     ));
     if (sequence !== syncCheckSequence || activeUserId !== userId) return;
     const pending = statuses.filter((status) => status.needsSync).length;
-    syncButton.hidden = pending === 0;
     accountStatus.textContent = pending
-      ? `${pending} collection${pending === 1 ? '' : 's'} need syncing. Choose Sync data to back up all your collections.`
-      : 'All collection checklists are up to date. Binder photos and card inventory sync separately.';
+      ? `${pending} collection${pending === 1 ? '' : 's'} need syncing. Tap Sync data to back up all your collections.`
+      : 'All collection checklists are up to date. Sync data is still available if you want to run it again.';
   } catch (error) {
     if (sequence !== syncCheckSequence || activeUserId !== userId) return;
     syncButton.hidden = false;
-    accountStatus.textContent = error?.message || 'Could not check cloud status. You can try syncing.';
+    accountStatus.textContent = 'Could not check cloud status: ' + (error?.message || 'you can still try syncing.');
   }
 }
 
