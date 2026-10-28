@@ -36,7 +36,10 @@ function mergeLocalPhotos(remote, local) {
     for (let i = 0; i < (page.slots || []).length; i++) {
       const remoteSlot = page.slots[i];
       const localSlot = localPage.slots?.[i];
-      if (remoteSlot?.type === 'card' && localSlot?.type === 'card' && localSlot.data) remoteSlot.data = localSlot.data;
+      if (remoteSlot?.type === 'card' && localSlot?.type === 'card'
+        && localSlot.data && localSlot.photoPath && localSlot.photoPath === remoteSlot.photoPath) {
+        remoteSlot.data = localSlot.data;
+      }
     }
   }
   return remote;
