@@ -221,6 +221,22 @@ async function removeSlot(index) {
   } else { window.alert('Please enter 1, 2, 3 or 4.'); return; }
   render();
 }
+function setBinderLoading(title, message, progress = 8) {
+  const panel = $('binderLoading');
+  if (!panel) return;
+  $('binderLoadingTitle').textContent = title;
+  $('binderLoadingMessage').textContent = message;
+  $('binderLoadingProgress').value = Math.max(0, Math.min(100, progress));
+  panel.hidden = false;
+}
+function finishBinderLoading() {
+  const panel = $('binderLoading');
+  if (!panel) return;
+  $('binderLoadingProgress').value = 100;
+  $('binderLoadingTitle').textContent = 'Binder ready!';
+  $('binderLoadingMessage').textContent = 'Your collection is here. Card photos may finish appearing one by one.';
+  window.setTimeout(() => { panel.hidden = true; }, 900);
+}
 function activeBinder() { return binders.find((b) => b.id === activeId); }
 function slotCard(slot, index) {
   const el = document.createElement('button');
@@ -377,13 +393,16 @@ function compressImage(file) {
 async function init() {
   const section = $('binderSection');
   if (!section) return;
-  try { db = await openDb(); binders = await allBinders(); }
+  setBinderLoading('Preparing your binder…', 'Opening your saved collection. Your cards are not being deleted.', 8);
+  try { db = await openDb(); binders = await allBinders(); setBinderLoading('Loading your saved cards…', 'Your on-device copy is ready. Checking for cloud updates next.', 28); }
   catch { $('binderStatus').textContent = 'Local binder storage is unavailable in this browser.'; return; }
   try {
     const user = await currentUser();
     if (user) {
+      setBinderLoading('Checking your cloud backup…', 'Keeping your saved binder and backed-up photos in sync.', 42);
       const localBinders = binders;
       const remoteBinders = await loadCloudBinders();
+      setBinderLoading('Putting your binder together…', 'Matching cloud records with the photos saved on this device.', 66);
       const localById = new Map(localBinders.map((item) => [item.id, item]));
       const remoteIds = new Set(remoteBinders.map((item) => item.id));
       binders = remoteBinders.map((remote) => {
@@ -404,6 +423,8 @@ async function init() {
     activeId = binders.some((item) => item.id === rememberedId) ? rememberedId : binders[0].id;
     pageIndex = restorePagePosition(activeId, activeBinder());
   }
+  setBinderLoading('Finishing binder setup…', 'Checking each binder and preserving local photo copies.', 78);
+  let checkedBinders = 0;
   for (const binder of binders) {
     ensureInventory(binder);
     await persistLocalBinder(binder);
@@ -422,6 +443,8 @@ async function init() {
       await persistLocalBinder(binder);
       $('binderStatus').textContent = 'Some binder content is still only on this device. Cloud upload failed: ' + (error?.message || 'try again online.');
     }
+    checkedBinders++;
+    setBinderLoading('Finishing binder setup…', `Checked binder ${checkedBinders} of ${binders.length}. Your local photos are preserved.`, 78 + Math.round((checkedBinders / Math.max(1, binders.length)) * 18));
   }
   $('newBinder').addEventListener('click', async () => {
     const name = window.prompt('Name this binder:'); if (!name?.trim()) return;
@@ -484,6 +507,7 @@ async function init() {
     if (Math.abs(dx) > 55) turn(dx < 0 ? 1 : -1);
   }, { passive: true });
   render();
+  finishBinderLoading();
   retryPendingUploads();
 }
 init();
