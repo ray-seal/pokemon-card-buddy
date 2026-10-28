@@ -146,10 +146,10 @@ export async function removeFriend(friendshipId) {
 export async function setCollectionPermission(collectionId, friendId, allowed) {
   const { client, user } = await signedInUser();
   if (allowed) {
-    const { error } = await client.from('collection_shares').upsert({
+    const { error } = await client.from('collection_shares').insert({
       collection_id: collectionId, owner_id: user.id, friend_id: friendId,
-    }, { onConflict: 'collection_id,friend_id', ignoreDuplicates: true });
-    if (error) throw error;
+    });
+    if (error && error.code !== '23505') throw error;
   } else {
     const { error } = await client.from('collection_shares').delete()
       .eq('collection_id', collectionId).eq('owner_id', user.id).eq('friend_id', friendId);
