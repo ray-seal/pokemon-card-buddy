@@ -73,6 +73,11 @@
       <button id="newBinder" type="button">New binder</button><button id="renameBinder" type="button">Rename</button><button id="removeBinder" type="button">Delete binder</button>
     </div>
     <p id="binderStatus" class="note">Photos save locally first and upload automatically when you’re online. Sign in to enable private cloud backup.</p>
+    <div id="binderLoading" class="binder-loading" role="status" aria-live="polite" hidden>
+      <strong id="binderLoadingTitle">Preparing your binder…</strong>
+      <p id="binderLoadingMessage">Checking your saved collection. Your cards are not being deleted.</p>
+      <progress id="binderLoadingProgress" max="100" value="8" aria-label="Binder loading progress"></progress>
+    </div>
     <div id="binderBook" class="binder-book">
       <div class="binder-drop-edge edge-left" data-direction="prev" aria-label="Drag here to turn to previous page">‹<span>Previous</span></div>
       <button id="prevBinderPage" class="page-nav" type="button" aria-label="Previous page">‹</button>
