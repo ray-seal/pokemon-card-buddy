@@ -226,17 +226,15 @@ export async function loadCloudBinders() {
     .eq('user_id', user.id)
     .order('updated_at', { ascending: true });
   if (error) throw error;
-  return Promise.all((data || []).map(async (row) => {
-    const binder = { id: row.local_id || row.id, cloudId: row.id, name: row.name, pages: row.pages || [], updatedAt: row.updated_at, collectionItems: row.collection_items || [] };
-    for (const page of binder.pages) for (const slot of page.slots || []) {
-      if (slot?.type === 'card' && slot.photoPath) {
-        try {
-          const { data: signed, error: signedError } = await client.storage.from('binder-photos').createSignedUrl(slot.photoPath, 3600);
-          if (!signedError && signed?.signedUrl) slot.photoUrl = signed.signedUrl;
-        } catch { /* Keep the saved storage path; retry URL generation on next load. */ }
-      }
-    }
-    return binder;
+  // Keep cloud loading lightweight: signed photo URLs are created on demand by
+  // slotCard() only for the nine pockets on the currently visible binder page.
+  return (data || []).map((row) => ({
+    id: row.local_id || row.id,
+    cloudId: row.id,
+    name: row.name,
+    pages: row.pages || [],
+    updatedAt: row.updated_at,
+    collectionItems: row.collection_items || [],
   }));
 }
 
