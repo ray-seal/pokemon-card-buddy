@@ -84,7 +84,7 @@ async function loadCardCatalogue() {
   return cardCataloguePromise;
 }
 function imageForCard(card, pokemon) {
-  if (card?.image) return card.image.replace(/\/$/, '') + '/high.svg';
+  if (card?.image) return card.image.replace(/\/$/, '') + '/high.webp';
   return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + (pokemon?.dexNumber || 25) + '.png';
 }
 async function generateCards(pack) {
@@ -246,6 +246,9 @@ function setVirtualView(view) {
   if (view === 'binder') window.dispatchEvent(new CustomEvent('cardbuddy-virtual-binder-render'));
   if (view === 'rewards') renderChallenges();
 }
+document.querySelectorAll('[data-virtual-view]').forEach((button) => {
+  button.addEventListener('click', () => setVirtualView(button.dataset.virtualView));
+});
 $('virtualCheckin').addEventListener('click', () => { claimCheckin(); renderCheckin(); renderChallenges(); });
 $('virtualCloseRip').addEventListener('click', () => {
   if (currentPack && !ripStarted) state.coins += currentPack.price;
