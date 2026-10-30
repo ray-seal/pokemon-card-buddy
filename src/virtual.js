@@ -450,16 +450,15 @@ function renderChallenges() {
 const TRADE_NPCS = {
   mystery: { name: 'Mystery Trader', description: 'Offer a card and receive a random card from the same rarity tier.' },
   general: { name: 'General Collector', description: 'Choose any Pokémon card from the catalogue. The rarity tier must match.' },
-  kanto: { name: 'Kanto Keeper', filterRegion: 'Kanto', description: 'Accepts cards from any region, but only offers Kanto Pokémon of matching rarity.' },
-  bill: { name: 'Bill', region: 'Kanto', sprite: 'bill', era: 'Pokémon Red / Blue', bio: 'Born and raised in Kanto, Bill is best known for creating the Pokémon Storage System, giving Trainers a place to keep all the Pokémon they catch.', speciality: 'Kanto Pokémon and evolutionary oddities', description: 'Bill specialises in Kanto Pokémon. He accepts cards from any region and offers Kanto Pokémon of matching rarity.', filterRegion: 'Kanto' },
-  kurt: { name: 'Kurt', region: 'Johto', sprite: 'kurt', era: 'Pokémon Gold / Silver', bio: 'The famous Azalea Town craftsman who makes special Poké Balls from Apricorns. Kurt knows a thing or two about unusual Pokémon.', speciality: 'Johto Pokémon and unusual finds', description: 'Kurt offers Johto Pokémon of matching rarity.', filterRegion: 'Johto' },
-  steven: { name: 'Steven Stone', region: 'Hoenn', sprite: 'steven-gen3', era: 'Pokémon Ruby / Sapphire', bio: 'The Hoenn Champion is a collector of rare stones. His curiosity for rare discoveries extends to the Pokémon he is willing to trade.', speciality: 'Rare Hoenn discoveries', description: 'Steven offers Hoenn Pokémon of matching rarity.', filterRegion: 'Hoenn' },
-  cynthia: { name: 'Cynthia', region: 'Sinnoh', sprite: 'cynthia-gen7', era: 'Pokémon Diamond / Pearl', bio: 'Sinnoh’s Champion is fascinated by mythology and the ancient history of Pokémon. Her trades favour Pokémon with a story to tell.', speciality: 'Sinnoh discoveries and ancient species', description: 'Cynthia offers Sinnoh Pokémon of matching rarity.', filterRegion: 'Sinnoh' },
-  n: { name: 'N', region: 'Unova', sprite: 'n', era: 'Pokémon Black / White', bio: 'N believes Pokémon and people should understand one another. He seeks unusual partners and Pokémon with strong bonds.', speciality: 'Unova Pokémon and unusual partners', description: 'N offers Unova Pokémon of matching rarity.', filterRegion: 'Unova' },
-  sycamore: { name: 'Professor Sycamore', region: 'Kalos', sprite: 'sycamore', era: 'Pokémon X / Y', bio: 'The Kalos Pokémon Professor studies evolution, especially the mysteries of Mega Evolution.', speciality: 'Kalos Pokémon and evolutionary lines', description: 'Professor Sycamore offers Kalos Pokémon of matching rarity.', filterRegion: 'Kalos' },
-  kukui: { name: 'Professor Kukui', region: 'Alola', sprite: 'kukui', era: 'Pokémon Sun / Moon', bio: 'A passionate researcher and battle enthusiast, Kukui helped bring the Alola League to life.', speciality: 'Alola Pokémon and battle-ready picks', description: 'Professor Kukui offers Alola Pokémon of matching rarity.', filterRegion: 'Alola' },
-  hop: { name: 'Hop', region: 'Galar', sprite: 'hop', era: 'Pokémon Sword / Shield', bio: 'Leon’s younger brother and a determined rival. Hop’s journey takes him from aspiring Champion to Pokémon researcher.', speciality: 'Galar Pokémon and surprising pairings', description: 'Hop offers Galar Pokémon of matching rarity.', filterRegion: 'Galar' },
-  arven: { name: 'Arven', region: 'Paldea', sprite: 'arven-s', era: 'Pokémon Scarlet / Violet', bio: 'A student with a talent for cooking and a knack for tracking down rare ingredients and Pokémon in Paldea’s wild areas.', speciality: 'Paldean Pokémon and habitat finds', description: 'Arven offers Paldean Pokémon of matching rarity.', filterRegion: 'Paldea' },
+  bill: { name: 'Bill', region: 'Kanto', sprite: 'bill', era: 'Pokémon Red / Blue', bio: 'Born and raised in Kanto, Bill is best known for creating the Pokémon Storage System, giving Trainers a place to keep all the Pokémon they catch.', speciality: 'Kanto Pokémon and evolutionary oddities', description: 'Bill specialises in Kanto Pokémon. He accepts cards from any region and offers Kanto Pokémon of matching rarity.' },
+  kurt: { name: 'Kurt', region: 'Johto', sprite: 'kurt', era: 'Pokémon Gold / Silver', bio: 'The famous Azalea Town craftsman who makes special Poké Balls from Apricorns. Kurt knows a thing or two about unusual Pokémon.', speciality: 'Johto Pokémon and unusual finds', description: 'Kurt offers Johto Pokémon of matching rarity.' },
+  steven: { name: 'Steven Stone', region: 'Hoenn', sprite: 'steven-gen3', era: 'Pokémon Ruby / Sapphire', bio: 'The Hoenn Champion is a collector of rare stones. His curiosity for rare discoveries extends to the Pokémon he is willing to trade.', speciality: 'Rare Hoenn discoveries', description: 'Steven offers Hoenn Pokémon of matching rarity.' },
+  cynthia: { name: 'Cynthia', region: 'Sinnoh', sprite: 'cynthia-gen7', era: 'Pokémon Diamond / Pearl', bio: 'Sinnoh’s Champion is fascinated by mythology and the ancient history of Pokémon. Her trades favour Pokémon with a story to tell.', speciality: 'Sinnoh discoveries and ancient species', description: 'Cynthia offers Sinnoh Pokémon of matching rarity.' },
+  n: { name: 'N', region: 'Unova', sprite: 'n', era: 'Pokémon Black / White', bio: 'N believes Pokémon and people should understand one another. He seeks unusual partners and Pokémon with strong bonds.', speciality: 'Unova Pokémon and unusual partners', description: 'N offers Unova Pokémon of matching rarity.' },
+  sycamore: { name: 'Professor Sycamore', region: 'Kalos', sprite: 'sycamore', era: 'Pokémon X / Y', bio: 'The Kalos Pokémon Professor studies evolution, especially the mysteries of Mega Evolution.', speciality: 'Kalos Pokémon and evolutionary lines', description: 'Professor Sycamore offers Kalos Pokémon of matching rarity.' },
+  kukui: { name: 'Professor Kukui', region: 'Alola', sprite: 'kukui', era: 'Pokémon Sun / Moon', bio: 'A passionate researcher and battle enthusiast, Kukui helped bring the Alola League to life.', speciality: 'Alola Pokémon and battle-ready picks', description: 'Professor Kukui offers Alola Pokémon of matching rarity.' },
+  hop: { name: 'Hop', region: 'Galar', sprite: 'hop', era: 'Pokémon Sword / Shield', bio: 'Leon’s younger brother and a determined rival. Hop’s journey takes him from aspiring Champion to Pokémon researcher.', speciality: 'Galar Pokémon and surprising pairings', description: 'Hop offers Galar Pokémon of matching rarity.' },
+  arven: { name: 'Arven', region: 'Paldea', sprite: 'arven-s', era: 'Pokémon Scarlet / Violet', bio: 'A student with a talent for cooking and a knack for tracking down rare ingredients and Pokémon in Paldea’s wild areas.', speciality: 'Paldean Pokémon and habitat finds', description: 'Arven offers Paldean Pokémon of matching rarity.' },
 };
 const REGIONAL_TRADERS = ['bill','kurt','steven','cynthia','n','sycamore','kukui','hop','arven'];
 function traderUnlocked(id) {
@@ -492,8 +491,8 @@ function renderTraderGallery() {
     const name = document.createElement('strong'); name.textContent = trader.name;
     const region = document.createElement('small'); region.textContent = trader.region + ' · ' + trader.era;
     const bio = document.createElement('p'); bio.textContent = unlocked ? trader.bio : 'Discover a Pokémon in the ' + trader.region + ' Pokédex to meet this trader.';
-    const speciality = document.createElement('span'); speciality.textContent = unlocked ? trader.speciality : '🔒 Not yet discovered';
-    details.append(name, region, bio, speciality); card.append(portrait, details);
+    const status = document.createElement('span'); status.textContent = unlocked ? 'Available to trade' : '🔒 Discover this region to unlock';
+    details.append(name, region, bio, status); card.append(portrait, details);
     return card;
   }));
 }
@@ -508,8 +507,8 @@ function renderTraderProfile() {
   const copy = document.createElement('div'), title = document.createElement('strong');
   title.textContent = trader.name + ' · ' + trader.region;
   const lore = document.createElement('p'); lore.textContent = unlocked ? trader.bio : 'Discover at least one Pokémon in the ' + trader.region + ' Pokédex to unlock this trader.';
-  const speciality = document.createElement('small'); speciality.textContent = unlocked ? 'Speciality: ' + trader.speciality : 'Locked · Regional Pokédex discovery required';
-  copy.append(title, lore, speciality); profile.append(image, copy);
+  const status = document.createElement('small'); status.textContent = unlocked ? 'Regional trader · same trade rules as the other NPCs' : 'Locked · Regional Pokédex discovery required';
+  copy.append(title, lore, status); profile.append(image, copy);
 }
 function tradeRarity(card) {
   const index = Number.isInteger(card?.rarityIndex) ? card.rarityIndex : 0;
@@ -570,8 +569,7 @@ function renderTradeOptions() {
   const catalogue = tradeCatalogue || [];
   const eligible = offered ? catalogue.filter(brief => {
     const species = matchPokemon(brief.name);
-    const region = TRADE_NPCS[npc]?.filterRegion;
-    return brief.id !== offered.cardId && (!region || species?.region === region);
+    return brief.id !== offered.cardId;
   }) : [];
   const previous = target.value;
   target.replaceChildren(new Option(npc === 'mystery' ? 'Random matching card' : 'Choose a return card…', ''));
@@ -616,8 +614,7 @@ async function makeNpcTrade() {
     const catalogue = await ensureTradeCatalogue();
     const pool = catalogue.filter(brief => {
       const species = matchPokemon(brief.name);
-      const region = TRADE_NPCS[npc]?.filterRegion;
-      return brief.id !== offered.cardId && (!region || species?.region === region);
+      return brief.id !== offered.cardId;
     });
     if (!pool.length) { $('virtualTradeRule').textContent = 'No eligible return cards are available right now.'; return; }
     const chosenId = npc === 'mystery' ? null : $('virtualTradeTarget').value;
