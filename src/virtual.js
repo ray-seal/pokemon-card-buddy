@@ -74,11 +74,12 @@ function matchPokemon(cardName) {
 async function loadCardCatalogue() {
   if (cardCataloguePromise) return cardCataloguePromise;
   cardCataloguePromise = (async () => {
-    const cached = safeParse(sessionStorage.getItem('cardbuddy.tcgdex.catalogue.v2'));
+    const cached = safeParse(sessionStorage.getItem('cardbuddy.tcgdex.catalogue.v3'));
     if (Array.isArray(cached) && cached.length) return cached;
     let cards = null;
+    // CardBrief records do not include category, so filtering the list endpoint by
+    // category returns no matches. Fetch the documented unfiltered list instead.
     for (const url of [
-      'https://api.tcgdex.net/v2/en/cards?category=Pokemon',
       'https://api.tcgdex.net/v2/en/cards'
     ]) {
       try {
@@ -86,13 +87,13 @@ async function loadCardCatalogue() {
         if (!response.ok) continue;
         const payload = await response.json();
         if (Array.isArray(payload) && payload.length) {
-          cards = payload.filter((card) => card.image && card.name && card.id && (!card.category || card.category === 'Pokemon'));
+          cards = payload.filter((card) => card.image && card.name && card.id);
           if (cards.length) break;
         }
       } catch { /* Try the unfiltered catalogue endpoint next. */ }
     }
     if (!cards?.length) throw new Error('TCGdex card catalogue is unavailable');
-    try { sessionStorage.setItem('cardbuddy.tcgdex.catalogue.v2', JSON.stringify(cards)); } catch {}
+    try { sessionStorage.setItem('cardbuddy.tcgdex.catalogue.v3', JSON.stringify(cards)); } catch {}
     return cards;
   })().catch((error) => { cardCataloguePromise = null; throw error; });
   return cardCataloguePromise;
@@ -194,9 +195,15 @@ async function finishRip() {
   $('virtualSelectedPack').classList.add('is-ripping');
   try { pendingCards = await generateCards(currentPack); }
   catch (error) {
-    state.coins += currentPack.price; save(); ripStarted = false;
+    // Refund exactly once. Clear the paid pack so closing the overlay cannot
+    // refund the same purchase again.
+    const failedPack = currentPack;
+    if (failedPack) state.coins += failedPack.price;
+    currentPack = null;
+    pendingCards = [];
+    save(); ripStarted = false;
     $('virtualSelectedPack').classList.remove('is-ripping');
-    $('virtualRipInstruction').textContent = 'Card scans are temporarily unavailable. Your coins have been returned. Please try again shortly.';
+    $('virtualRipInstruction').textContent = 'Card scans are temporarily unavailable. Your coins have been returned once. Please try again shortly.';
     $('virtualCloseRip').hidden = false;
     return;
   }
