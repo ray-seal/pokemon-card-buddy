@@ -508,30 +508,53 @@ function renderTradeHub() {
   renderTradeOptions();
   void prepareTradeCatalogue();
 }
+let pendingNpcTrade = null;
 async function makeNpcTrade() {
+  const button = $('virtualTradeButton');
+  if (button.disabled) return;
   const offer = $('virtualTradeOffer').value;
   const offered = state.inventory.find(card => card.id === offer);
   const npc = $('virtualTradeNpc').value;
   if (!offered) { $('virtualTradeRule').textContent = 'Choose a card you actually own.'; return; }
   const tier = tradeRarity(offered);
-  let catalogue;
-  try { catalogue = await ensureTradeCatalogue(); }
-  catch { $('virtualTradeRule').textContent = 'Could not load the trade catalogue. No card was exchanged.'; return; }
-  let pool = catalogue.filter(brief => {
-    const species = matchPokemon(brief.name);
-    return brief.id !== offered.cardId && (npc !== 'kanto' || species?.region === 'Kanto');
-  });
-  if (!pool.length) { $('virtualTradeRule').textContent = 'No eligible return cards are available right now.'; return; }
-  const chosenId = npc === 'mystery' ? null : $('virtualTradeTarget').value;
-  const brief = chosenId ? pool.find(card => card.id === chosenId) : pool[Math.floor(Math.random() * pool.length)];
-  if (!brief) { $('virtualTradeRule').textContent = 'Choose a valid return card.'; return; }
-  const returnCard = tradeCardFromBrief(brief, tier);
-  if (!returnCard) return;
-  const lastCopy = state.inventory.filter(card => card.cardId === offered.cardId).length <= 1;
-  const confirmText = 'Trade away ' + offered.name + ' (' + RARITIES[tier] + ') for ' + returnCard.name + ' (' + RARITIES[tier] + ') with ' + TRADE_NPCS[npc].name + '?' + (lastCopy ? ' This is your last copy.' : '');
-  if (!window.confirm(confirmText)) return;
-  const currentIndex = state.inventory.findIndex(card => card.id === offered.id);
-  if (currentIndex < 0) { $('virtualTradeRule').textContent = 'That card is no longer in your inventory. Refresh and try again.'; return; }
+  button.disabled = true;
+  button.textContent = 'Preparing trade…';
+  try {
+    const catalogue = await ensureTradeCatalogue();
+    const pool = catalogue.filter(brief => {
+      const species = matchPokemon(brief.name);
+      return brief.id !== offered.cardId && (npc !== 'kanto' || species?.region === 'Kanto');
+    });
+    if (!pool.length) { $('virtualTradeRule').textContent = 'No eligible return cards are available right now.'; return; }
+    const chosenId = npc === 'mystery' ? null : $('virtualTradeTarget').value;
+    const brief = chosenId ? pool.find(card => card.id === chosenId) : pool[Math.floor(Math.random() * pool.length)];
+    if (!brief) { $('virtualTradeRule').textContent = 'Choose a valid return card.'; return; }
+    const returnCard = tradeCardFromBrief(brief, tier);
+    if (!returnCard) { $('virtualTradeRule').textContent = 'That return card could not be prepared. Please choose another.'; return; }
+    const lastCopy = state.inventory.filter(card => card.cardId === offered.cardId).length <= 1;
+    pendingNpcTrade = { offeredId: offered.id, returnCard, npc, tier };
+    $('virtualTradeReviewText').textContent = 'You will give ' + offered.name + ' (' + RARITIES[tier] + ') and receive ' + returnCard.name + ' (' + RARITIES[tier] + ') from ' + TRADE_NPCS[npc].name + '.' + (lastCopy ? ' This is your last copy.' : '');
+    $('virtualTradeReview').showModal();
+  } catch (error) {
+    console.error('NPC trade preparation failed:', error);
+    $('virtualTradeRule').textContent = 'The trade could not be prepared. No cards have been exchanged. Please try again.';
+  } finally {
+    button.textContent = 'Review and trade';
+    renderTradeOptions();
+  }
+}
+function completeNpcTrade() {
+  if (!pendingNpcTrade) return;
+  const { offeredId, returnCard, npc, tier } = pendingNpcTrade;
+  const currentIndex = state.inventory.findIndex(card => card.id === offeredId);
+  if (currentIndex < 0) {
+    $('virtualTradeRule').textContent = 'That card is no longer in your inventory. No trade was made.';
+    pendingNpcTrade = null;
+    $('virtualTradeReview').close();
+    renderTradeOptions();
+    return;
+  }
+  const offered = state.inventory[currentIndex];
   state.inventory.splice(currentIndex, 1);
   state.inventory.push(returnCard);
   if (returnCard.pokemonId && !state.unlockedPokemon.includes(returnCard.pokemonId)) state.unlockedPokemon.push(returnCard.pokemonId);
@@ -540,6 +563,8 @@ async function makeNpcTrade() {
     npc: TRADE_NPCS[npc].name, date: new Date().toISOString(),
   });
   state.tradeHistory = state.tradeHistory.slice(0,100);
+  pendingNpcTrade = null;
+  $('virtualTradeReview').close();
   save();
   window.dispatchEvent(new CustomEvent('cardbuddy-virtual-inventory-updated'));
   renderTradeOptions();
@@ -564,6 +589,9 @@ $('virtualTradeNpc').addEventListener('change', renderTradeOptions);
 $('virtualTradeOffer').addEventListener('change', renderTradeOptions);
 $('virtualTradeTarget').addEventListener('change', renderTradeOptions);
 $('virtualTradeButton').addEventListener('click', makeNpcTrade);
+$('virtualTradeConfirm').addEventListener('click', completeNpcTrade);
+$('virtualTradeCancel').addEventListener('click', () => { pendingNpcTrade = null; $('virtualTradeReview').close(); });
+$('virtualTradeReview').addEventListener('cancel', () => { pendingNpcTrade = null; });
 $('virtualCloseRip').addEventListener('click', () => {
   if (currentPack && !ripStarted) state.coins += currentPack.price;
   currentPack = null; pendingCards = []; ripStarted = false;
