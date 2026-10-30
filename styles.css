@@ -491,3 +491,7 @@ main { max-width:54rem; margin:0 auto; padding:0 1rem 2rem; }
   .virtual-reveal-cards { min-height:42vh; }
   .virtual-reveal-cards .full-card { width:min(68vw,17rem); }
 }
+
+.virtual-challenge-action { display:flex; align-items:center; justify-content:flex-end; flex:0 0 auto; }
+.virtual-challenge-action button { white-space:nowrap; padding:.55rem .7rem; font-size:.8rem; font-weight:800; background:linear-gradient(110deg,#226fbd,#6350bb); border-color:#6ca9f2; }
+@media(max-width:25rem) { .virtual-challenge { align-items:flex-start; flex-direction:column; } .virtual-challenge-action { width:100%; justify-content:flex-start; } }
