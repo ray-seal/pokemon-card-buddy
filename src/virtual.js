@@ -29,6 +29,12 @@ let state = safeParse(localStorage.getItem(STORE)) || freshState();
 if (!Array.isArray(state.inventory)) state.inventory = [];
 if (!Array.isArray(state.unlockedPokemon)) state.unlockedPokemon = [];
 if (!Array.isArray(state.tradeHistory)) state.tradeHistory = [];
+for (const card of state.inventory) {
+  if (!card.id) card.id = uid();
+  if (typeof card.id !== 'string') card.id = String(card.id);
+  if (!card.name) card.name = card.pokemonName || 'Unknown Pokémon';
+}
+
 let tradeCatalogue = null;
 let currentPack = null;
 let pendingCards = [];
@@ -467,13 +473,14 @@ function renderTradeOptions() {
   const offer = $('virtualTradeOffer');
   const target = $('virtualTradeTarget');
   const npc = $('virtualTradeNpc').value;
-  const offered = state.inventory.find(card => card.id === offer.value);
-  const tier = offered ? tradeRarity(offered) : null;
-  const inventory = [...state.inventory].sort((a,b) => a.name.localeCompare(b.name));
+  const selectedId = String(offer.value || '');
+  const inventory = [...state.inventory].sort((a,b) => String(a.name || '').localeCompare(String(b.name || '')));
   offer.replaceChildren(new Option('Choose a card you own…',''), ...inventory.map(card =>
-    new Option(card.name + ' · ' + RARITIES[tradeRarity(card)] + (state.inventory.filter(item => item.cardId === card.cardId).length === 1 ? ' · last copy' : ''), card.id)
+    new Option(String(card.name || card.pokemonName || 'Unknown Pokémon') + ' · ' + RARITIES[tradeRarity(card)] + (state.inventory.filter(item => item.cardId && item.cardId === card.cardId).length === 1 ? ' · last copy' : ''), String(card.id))
   ));
-  if (offered && state.inventory.some(card => card.id === offered.id)) offer.value = offered.id;
+  offer.value = selectedId;
+  const offered = inventory.find(card => String(card.id) === String(offer.value));
+  const tier = offered ? tradeRarity(offered) : null;
   const catalogue = tradeCatalogue || [];
   const eligible = offered ? catalogue.filter(brief => {
     const species = matchPokemon(brief.name);
@@ -486,7 +493,7 @@ function renderTradeOptions() {
     if (eligible.some(brief => brief.id === previous)) target.value = previous;
   }
   target.disabled = !offered || npc === 'mystery';
-  $('virtualTradeRule').textContent = TRADE_NPCS[npc].description + (offered ? ' Offered rarity: ' + RARITIES[tier] + '.' : '');
+  $('virtualTradeRule').textContent = TRADE_NPCS[npc].description + (offered ? ' Offered rarity: ' + RARITIES[tier] + '.' : ' Select a card you own to begin.');
   $('virtualTradeButton').disabled = !offered || (npc !== 'mystery' && !target.value);
   $('virtualTradeHistory').replaceChildren(...state.tradeHistory.slice(0,15).map(entry => {
     const row = document.createElement('article'); row.className = 'virtual-trade-history-row';
