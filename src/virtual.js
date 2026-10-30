@@ -481,10 +481,26 @@ function renderTraderGallery() {
     const unlocked = traderUnlocked(id);
     const card = document.createElement('article');
     card.className = 'virtual-trader-card' + (unlocked ? ' is-unlocked' : ' is-locked');
+    card.tabIndex = unlocked ? 0 : -1;
+    card.setAttribute('role', unlocked ? 'button' : 'group');
+    card.setAttribute('aria-label', trader.name + ', ' + trader.region + (unlocked ? ', select trader' : ', locked'));
+    if (unlocked) {
+      const selectTrader = () => {
+        $('virtualTradeNpc').value = id;
+        pendingNpcTrade = null;
+        $('virtualTradeReview').hidden = true;
+        renderTradeOptions();
+        $('virtualTradeNpc').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      };
+      card.addEventListener('click', selectTrader);
+      card.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectTrader(); }
+      });
+    }
     const portrait = document.createElement('div'); portrait.className = 'virtual-trader-portrait';
     const image = document.createElement('img');
     image.src = 'https://play.pokemonshowdown.com/sprites/trainers/' + trader.sprite + '.png';
-    image.alt = trader.name + ' trainer sprite'; image.loading = 'lazy';
+    image.alt = trader.name + ' character artwork'; image.loading = 'lazy'; image.decoding = 'async';
     image.onerror = () => { image.hidden = true; portrait.classList.add('sprite-unavailable'); };
     portrait.append(image);
     const details = document.createElement('div'); details.className = 'virtual-trader-details';
@@ -503,7 +519,7 @@ function renderTraderProfile() {
   if (!trader.region) { const text = document.createElement('p'); text.className = 'note'; text.textContent = trader.description; profile.append(text); return; }
   const unlocked = traderUnlocked(id), image = document.createElement('img');
   image.src = 'https://play.pokemonshowdown.com/sprites/trainers/' + trader.sprite + '.png';
-  image.alt = trader.name + ' trainer sprite'; image.loading = 'lazy'; image.onerror = () => { image.hidden = true; };
+  image.alt = trader.name + ' character artwork'; image.loading = 'lazy'; image.decoding = 'async'; image.onerror = () => { image.hidden = true; };
   const copy = document.createElement('div'), title = document.createElement('strong');
   title.textContent = trader.name + ' · ' + trader.region;
   const lore = document.createElement('p'); lore.textContent = unlocked ? trader.bio : 'Discover at least one Pokémon in the ' + trader.region + ' Pokédex to unlock this trader.';
