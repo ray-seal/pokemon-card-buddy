@@ -236,3 +236,4 @@ window.addEventListener('cardbuddy-virtual-pokedex-render',renderPokedex);
 ensureBinder();
 renderBinder();
 renderPokedex();
+
