@@ -516,3 +516,11 @@ main { max-width:54rem; margin:0 auto; padding:0 1rem 2rem; }
 .dex-owned-card img { width:100%; max-height:15rem; object-fit:contain; }
 .dex-owned-card span { color:#aebbd3; font-size:.72rem; text-align:center; }
 .image-unavailable { min-height:2rem; }
+
+/* Regional booster packs */
+.regional-pack-heading { margin-top:1.7rem; padding-top:1rem; border-top:1px solid #344260; }
+.regional-pack-region { display:flex; flex-direction:column; gap:.35rem; max-width:20rem; margin:.6rem 0 1rem; color:var(--muted); font-size:.82rem; }
+.regional-pack-region select { width:100%; padding:.65rem .75rem; border:1px solid #43577a; border-radius:.65rem; background:#111a2b; color:inherit; }
+.regional-pack-card { border-color:#7a6a42; box-shadow:0 10px 28px #0005, inset 0 0 18px #f3ce6520; }
+.regional-foil { outline:1px solid #fff5; outline-offset:-5px; }
+.virtual-choice .regional-foil { border-color:#f7e2a1; }
