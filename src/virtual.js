@@ -81,7 +81,7 @@ async function loadCardCatalogue() {
   return cardCataloguePromise;
 }
 function imageForCard(card, pokemon) {
-  if (card?.image) return card.image.replace(/\/$/, '') + '/high.webp';
+  if (card?.image) return card.image.replace(/\/$/, '') + '/high.svg';
   return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + (pokemon?.dexNumber || 25) + '.png';
 }
 async function generateCards(pack) {
