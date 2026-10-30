@@ -10,7 +10,7 @@ const PACKS = [
 const RARITIES = ['Common','Uncommon','Rare','Epic','Legendary','Grail'];
 const REGIONAL_PRICES = { starter: 125, premium: 250, elite: 425, legendary: 675 };
 const REGION_VARIANTS = {
-  Kanto: [{name:'Red',hue:0},{name:'Green',hue:105},{name:'Blue',hue:205},{name:'Yellow',hue:48}],
+  Kanto: [{name:'Red',hue:150},{name:'Green',hue:270},{name:'Blue',hue:0},{name:'Yellow',hue:210}],
   Johto: [{name:'Gold',hue:38},{name:'Silver',hue:0},{name:'Crystal',hue:190},{name:'SoulSilver',hue:215}],
   Hoenn: [{name:'Ruby',hue:345},{name:'Sapphire',hue:210},{name:'Emerald',hue:125},{name:'Omega',hue:285}],
   Sinnoh: [{name:'Diamond',hue:205},{name:'Pearl',hue:330},{name:'Platinum',hue:0},{name:'Legends',hue:45}],
@@ -108,7 +108,13 @@ async function loadCardCatalogue() {
     const cacheKey = 'cardbuddy.tcgdex.catalogue.v4';
     const sessionCache = safeParse(sessionStorage.getItem(cacheKey));
     const savedCache = safeParse(localStorage.getItem(cacheKey));
+    const legacyCache = safeParse(sessionStorage.getItem('cardbuddy.tcgdex.catalogue.v3')) || safeParse(localStorage.getItem('cardbuddy.tcgdex.catalogue.v3'));
     if (Array.isArray(sessionCache) && sessionCache.length) return sessionCache;
+    if (Array.isArray(legacyCache) && legacyCache.length) {
+      try { sessionStorage.setItem(cacheKey, JSON.stringify(legacyCache)); } catch {}
+      try { localStorage.setItem(cacheKey, JSON.stringify(legacyCache)); } catch {}
+      return legacyCache;
+    }
     if (Array.isArray(savedCache) && savedCache.length) {
       try { sessionStorage.setItem(cacheKey, JSON.stringify(savedCache)); } catch {}
       return savedCache;
