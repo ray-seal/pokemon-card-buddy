@@ -57,7 +57,7 @@
       <label>Sort <select id="sort"></select></label>
     </div>
   </section>
-  <nav class="app-tabs" aria-label="App sections"><button id="showCollection" class="active" type="button">Pokédex</button><button id="showBinder" type="button">Virtual Binder</button><button id="showFriends" type="button">Friends</button></nav>
+  <nav class="app-tabs" aria-label="App sections"><button id="showCollection" class="active" type="button">Pokédex</button><button id="showBinder" type="button">Binder</button><button id="showFriends" type="button">Friends</button><button id="showVirtual" type="button">✨ Virtual</button></nav>
   <section id="collectionSection">
   <main>
     <ul id="list" class="list"></ul>
@@ -122,8 +122,125 @@
       </section>
     </div>
   </section>
+  <section id="virtualSection" hidden aria-label="Virtual collections">
+    <div class="virtual-shell">
+      <header class="virtual-heading">
+        <div><p class="virtual-eyebrow">CARDBUDDY ARCADE</p><h2>Virtual Collections</h2><p>Rip packs. Find favourites. Build a collection of your own.</p></div>
+        <div class="virtual-wallet"><span>🪙</span><strong id="virtualCoins">0</strong><small>coins</small></div>
+      </header>
+      <div class="virtual-subnav" role="tablist" aria-label="Virtual sections">
+        <button class="active" data-virtual-view="packs" type="button">Packs</button>
+        <button data-virtual-view="binder" type="button">Binders</button>
+        <button data-virtual-view="pokedex" type="button">Pokédex</button>
+        <button data-virtual-view="rewards" type="button">Rewards</button>
+        <button data-virtual-view="trades" type="button">Trade Hub</button>
+      </div>
+      <section id="virtualPacksView" class="virtual-view">
+        <div class="virtual-daily"><div><strong>Daily check-in</strong><p id="virtualCheckinStatus">Collect your daily 25 coins.</p></div><button id="virtualCheckin" type="button">View rewards</button></div>
+        <div class="virtual-pack-intro"><h3>Choose your pack</h3><p>Eight packs appear for every opening. Pick your favourite and rip it open.</p></div>
+        <div id="virtualPackGrid" class="virtual-pack-grid"></div>
+        <div class="virtual-pack-intro regional-pack-heading"><h3>Regional packs</h3><p>Only Pokémon native to your chosen region. Card artwork and sets can be from any era.</p></div>
+        <label class="regional-pack-region">Choose region <select id="virtualRegionalPackRegion" aria-label="Choose regional booster region"></select></label>
+        <div id="virtualRegionalPackGrid" class="virtual-pack-grid"></div>
+        <p class="virtual-prototype-note">Regional packs guarantee Pokémon from the selected Pokédex region. Card artwork can be from any set or generation. Coins and virtual cards are stored on this device.</p>
+      </section>
+      <section id="virtualBinderView" class="virtual-view" hidden>
+        <div class="binder-toolbar virtual-binder-toolbar">
+          <div><h3 id="virtualBinderName">My Virtual Binder</h3><p id="virtualBinderPageCount">Page 1 of 1</p></div>
+          <label>Binder <select id="virtualBinderSelect"></select></label>
+          <label>Page <select id="virtualBinderPageJump" aria-label="Jump to virtual binder page"></select></label>
+          <button id="virtualNewBinder" type="button">New binder</button>
+          <button id="virtualRenameBinder" type="button">Rename</button>
+          <button id="virtualDeleteBinder" type="button">Delete</button>
+        </div>
+        <p id="virtualBinderStats" class="note">Your virtual cards are separate from physical collections.</p>
+        <div id="virtualBinderBook" class="binder-book">
+          <div class="binder-drop-edge edge-left" data-virtual-direction="prev" aria-label="Drag to previous page">‹<span>Previous</span></div>
+          <button id="virtualPrevPage" class="page-nav" type="button" aria-label="Previous virtual binder page">‹</button>
+          <div id="virtualBinderPages" class="binder-pages" aria-label="Nine pocket virtual binder page"></div>
+          <button id="virtualNextPage" class="page-nav" type="button" aria-label="Next virtual binder page">›</button>
+          <div class="binder-drop-edge edge-right" data-virtual-direction="next" aria-label="Drag to next page">›<span>Next</span></div>
+        </div>
+        <div class="binder-page-controls"><button id="virtualAddPage" type="button">＋ Add page</button><button id="virtualRemovePage" type="button">Remove current page</button></div>
+        <dialog id="virtualBinderPicker" class="binder-choice-dialog">
+          <h3>Add a card to this pocket</h3><p>Choose a card from your virtual inventory.</p>
+          <div id="virtualBinderPickerCards" class="virtual-picker-grid"></div>
+          <div class="binder-choice-footer"><button id="virtualBinderPickerClose" type="button">Close</button></div>
+        </dialog>
+        <dialog id="virtualCardDetail" class="binder-choice-dialog virtual-card-detail">
+          <div id="virtualCardDetailContent"></div>
+          <div class="binder-choice-footer"><button id="virtualCardDetailClose" type="button">Close</button></div>
+        </dialog>
+      </section>
+      <section id="virtualPokedexView" class="virtual-view" hidden>
+        <div class="virtual-pokedex-head">
+          <div><h3>Regional Pokédex</h3><p id="virtualPokedexProgress">Discover Pokémon by pulling their cards.</p></div>
+          <label>Region <select id="virtualPokedexRegion" aria-label="Choose Pokédex region"></select></label>
+        </div>
+        <div class="virtual-pokedex-search"><input id="virtualPokedexSearch" type="search" placeholder="Search discovered Pokémon…" aria-label="Search Pokédex"></div>
+        <div id="virtualPokedexGrid" class="virtual-pokedex-grid"></div>
+        <dialog id="virtualPokedexDetail" class="binder-choice-dialog virtual-pokedex-detail">
+          <div id="virtualPokedexDetailContent"></div>
+          <div class="binder-choice-footer"><button id="virtualPokedexDetailClose" type="button">Close</button></div>
+        </dialog>
+      </section>
+      <section id="virtualTradesView" class="virtual-view" hidden>
+        <div class="virtual-pack-intro"><h3>NPC Trade Hub</h3><p>Swap one of your virtual cards for another card of the same rarity tier. These trades are local to this device.</p></div>
+        <div class="virtual-trade-panel">
+          <label>Choose your trader
+            <select id="virtualTradeNpc">
+              <option value="mystery">Mystery Trader</option>
+              <option value="general">General Collector</option>
+              <option value="kanto">Kanto Keeper</option>
+            </select>
+          </label>
+          <label>Card you are offering
+            <select id="virtualTradeOffer"><option value="">Choose a card you own…</option></select>
+          </label>
+          <label>Card you want in return
+            <select id="virtualTradeTarget" disabled><option value="">Choose a return card…</option></select>
+          </label>
+          <p id="virtualTradeRule" class="note" role="status">Mystery Trader chooses a random card of matching rarity.</p>
+          <button id="virtualTradeButton" class="primary-button" type="button" disabled>Review and trade</button>
+        </div>
+      <section id="virtualTradeReview" class="virtual-trade-review" hidden aria-live="polite">
+        <h3>Review your trade</h3>
+        <p id="virtualTradeReviewText"></p>
+        <div class="virtual-trade-review-actions">
+          <button id="virtualTradeCancel" type="button" class="secondary">Cancel</button>
+          <button id="virtualTradeConfirm" type="button" class="primary-button">Confirm trade</button>
+        </div>
+      </section>
+        <div class="virtual-pack-intro"><h3>Trade history</h3><p>Recent swaps from this device.</p></div>
+        <div id="virtualTradeHistory" class="virtual-trade-history"></div>
+      </section>
+      <section id="virtualRewardsView" class="virtual-view" hidden>
+        <div class="virtual-pack-intro"><h3>Daily challenges</h3><p>Complete challenges to earn coins, then claim each reward here. Nothing is added to your wallet until you tap Claim.</p></div>
+        <div id="virtualChallengeList" class="virtual-challenge-list"></div>
+      </section>
+    </div>
+    <div id="virtualRipOverlay" class="virtual-rip-overlay" hidden>
+      <button id="virtualCloseRip" class="virtual-close-rip" type="button" aria-label="Close pack opening">×</button>
+      <p class="virtual-rip-brand">CARDBUDDY ARCADE</p>
+      <p id="virtualRipInstruction" class="virtual-rip-instruction">Choose one of your eight packs</p>
+      <div id="virtualChoiceGrid" class="virtual-choice-grid"></div>
+      <div id="virtualSelectedPack" class="virtual-selected-pack" hidden>
+        <div id="virtualPackArtwork" class="virtual-pack-art"><span class="pack-crown">♛</span><strong>CARDBUDDY</strong><small>VIRTUAL BOOSTER</small></div>
+        <p class="virtual-swipe-hint">Swipe across the top to rip!</p>
+        <div class="virtual-swipe-track"><span>← SWIPE TO RIP →</span></div>
+      </div>
+      <div id="virtualReveal" class="virtual-reveal" hidden>
+        <div class="virtual-sparkles" aria-hidden="true">✦ ✧ ✦ ✧ ✦</div>
+        <p id="virtualRevealCount" class="virtual-rip-brand">CARD 1 OF 5</p>
+        <div id="virtualRevealCards" class="virtual-reveal-cards"></div>
+        <div class="virtual-reveal-controls"><button id="virtualNextCard" type="button">Next card →</button><button id="virtualDone" type="button" hidden>Add to collection</button></div>
+      </div>
+    </div>
+  </section>
   <script type="module" src="src/main.js"></script>
   <script type="module" src="src/binder.js"></script>
   <script type="module" src="src/friends.js"></script>
+  <script type="module" src="src/virtual.js"></script>
+  <script type="module" src="src/virtual-binder.js"></script>
 </body>
 </html>
