@@ -200,12 +200,20 @@ function imageForCard(card) {
 function attachCardImage(image, card) {
   const raw = String(card?.image || '').replace(/\/(?:high|low)\.(?:webp|png|jpg|svg)$/i, '').replace(/\/$/, '');
   if (!raw) { image.hidden = true; return; }
-  const formats = ['high.png','high.webp','high.jpg','low.png','low.webp','low.jpg'];
+  // TCGdex serves WebP as its primary scan format. Try it first to avoid
+  // several predictable failed requests for each card.
+  const formats = ['high.webp', 'high.png', 'high.jpg', 'low.webp', 'low.png', 'low.jpg'];
   let index = 0;
+  image.decoding = 'async';
   image.onerror = () => {
     index += 1;
     if (index < formats.length) image.src = raw + '/' + formats[index];
-    else { image.onerror = null; image.removeAttribute('src'); image.alt = 'Trading card scan unavailable'; image.classList.add('image-unavailable'); }
+    else {
+      image.onerror = null;
+      image.removeAttribute('src');
+      image.alt = 'Trading card scan unavailable';
+      image.classList.add('image-unavailable');
+    }
   };
   image.src = raw + '/' + formats[index];
 }
