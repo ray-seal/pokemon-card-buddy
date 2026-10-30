@@ -130,8 +130,9 @@
       </header>
       <div class="virtual-subnav" role="tablist" aria-label="Virtual sections">
         <button class="active" data-virtual-view="packs" type="button">Packs</button>
-        <button data-virtual-view="binder" type="button">My binder</button>
-        <button data-virtual-view="rewards" type="button">Daily rewards</button>
+        <button data-virtual-view="binder" type="button">Binders</button>
+        <button data-virtual-view="pokedex" type="button">Pokédex</button>
+        <button data-virtual-view="rewards" type="button">Rewards</button>
       </div>
       <section id="virtualPacksView" class="virtual-view">
         <div class="virtual-daily"><div><strong>Daily check-in</strong><p id="virtualCheckinStatus">Collect your daily 25 coins.</p></div><button id="virtualCheckin" type="button">Claim +25</button></div>
@@ -140,8 +141,40 @@
         <p class="virtual-prototype-note">Testing preview: coins and virtual cards are stored on this device only. Secure cloud packs and trading will be enabled after the backend migration is installed.</p>
       </section>
       <section id="virtualBinderView" class="virtual-view" hidden>
-        <div class="virtual-pack-intro"><h3>Virtual binder</h3><p id="virtualBinderStats">Your virtual pulls live here, completely separate from physical collections.</p></div>
-        <div id="virtualCardGrid" class="virtual-card-grid"></div>
+        <div class="binder-toolbar virtual-binder-toolbar">
+          <div><h3 id="virtualBinderName">My Virtual Binder</h3><p id="virtualBinderPageCount">Page 1 of 1</p></div>
+          <label>Binder <select id="virtualBinderSelect"></select></label>
+          <label>Page <select id="virtualBinderPageJump" aria-label="Jump to virtual binder page"></select></label>
+          <button id="virtualNewBinder" type="button">New binder</button>
+          <button id="virtualRenameBinder" type="button">Rename</button>
+          <button id="virtualDeleteBinder" type="button">Delete</button>
+        </div>
+        <p id="virtualBinderStats" class="note">Your virtual cards are separate from physical collections.</p>
+        <div id="virtualBinderBook" class="binder-book">
+          <div class="binder-drop-edge edge-left" data-virtual-direction="prev" aria-label="Drag to previous page">‹<span>Previous</span></div>
+          <button id="virtualPrevPage" class="page-nav" type="button" aria-label="Previous virtual binder page">‹</button>
+          <div id="virtualBinderPages" class="binder-pages" aria-label="Nine pocket virtual binder page"></div>
+          <button id="virtualNextPage" class="page-nav" type="button" aria-label="Next virtual binder page">›</button>
+          <div class="binder-drop-edge edge-right" data-virtual-direction="next" aria-label="Drag to next page">›<span>Next</span></div>
+        </div>
+        <div class="binder-page-controls"><button id="virtualAddPage" type="button">＋ Add page</button><button id="virtualRemovePage" type="button">Remove current page</button></div>
+        <dialog id="virtualBinderPicker" class="binder-choice-dialog">
+          <h3>Add a card to this pocket</h3><p>Choose a card from your virtual inventory.</p>
+          <div id="virtualBinderPickerCards" class="virtual-picker-grid"></div>
+          <div class="binder-choice-footer"><button id="virtualBinderPickerClose" type="button">Close</button></div>
+        </dialog>
+        <dialog id="virtualCardDetail" class="binder-choice-dialog virtual-card-detail">
+          <div id="virtualCardDetailContent"></div>
+          <div class="binder-choice-footer"><button id="virtualCardDetailClose" type="button">Close</button></div>
+        </dialog>
+      </section>
+      <section id="virtualPokedexView" class="virtual-view" hidden>
+        <div class="virtual-pokedex-head">
+          <div><h3>Regional Pokédex</h3><p id="virtualPokedexProgress">Discover Pokémon by pulling their cards.</p></div>
+          <label>Region <select id="virtualPokedexRegion" aria-label="Choose Pokédex region"></select></label>
+        </div>
+        <div class="virtual-pokedex-search"><input id="virtualPokedexSearch" type="search" placeholder="Search discovered Pokémon…" aria-label="Search Pokédex"></div>
+        <div id="virtualPokedexGrid" class="virtual-pokedex-grid"></div>
       </section>
       <section id="virtualRewardsView" class="virtual-view" hidden>
         <div class="virtual-pack-intro"><h3>Daily challenges</h3><p>Little goals, extra coins, no real-money purchases.</p></div>
@@ -160,9 +193,9 @@
       </div>
       <div id="virtualReveal" class="virtual-reveal" hidden>
         <div class="virtual-sparkles" aria-hidden="true">✦ ✧ ✦ ✧ ✦</div>
-        <h2>Look what you pulled!</h2>
+        <p id="virtualRevealCount" class="virtual-rip-brand">CARD 1 OF 5</p>
         <div id="virtualRevealCards" class="virtual-reveal-cards"></div>
-        <button id="virtualDone" type="button">Add to binder</button>
+        <div class="virtual-reveal-controls"><button id="virtualNextCard" type="button">Next card →</button><button id="virtualDone" type="button" hidden>Add cards to binder</button></div>
       </div>
     </div>
   </section>
@@ -170,5 +203,6 @@
   <script type="module" src="src/binder.js"></script>
   <script type="module" src="src/friends.js"></script>
   <script type="module" src="src/virtual.js"></script>
+  <script type="module" src="src/virtual-binder.js"></script>
 </body>
 </html>
