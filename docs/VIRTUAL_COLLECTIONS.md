@@ -70,22 +70,34 @@ All minting, pack rolls, coin deductions, rewards, rarity matching and card tran
 
 Do not apply the production migration to the live project. Test against a dedicated staging Supabase project and two separate test accounts first.
 
+## Card catalogue and regional discovery
+
+Pack pulls use TCGDex's English Pokémon card catalogue and display the card's full artwork image one at a time. The first prototype caches the catalogue for the current browser session. If TCGDex is unavailable, it falls back to species artwork so the interaction can still be tested.
+
+The regional Pokédex is driven by the existing National Pokédex species reference data, grouped into the nine region/generation collections already defined by the app. Entries remain `???` until a matching Pokémon card is pulled. A pulled card only unlocks a species when its card name can be matched to the species catalogue.
+
+Virtual binders have their own local data store, separate from the existing physical binder IndexedDB store. They use the same nine-pocket CSS layout, page controls, page-turn animation, card captions, drag-and-drop slot swapping, and page-edge drag movement. Players can create, rename and delete multiple virtual binders. Deleting a binder never deletes inventory cards.
+
 ## Current test-branch scope
 
 Implemented in this branch:
 - Separate Virtual navigation entry and section
 - Four pack tiers and eight-pack selection
+- Four dedicated CardBuddy SVG pack-front assets using the approved blue, purple, green and gold visual family
+- TCGDex full-card artwork with one-at-a-time reveal controls
+- Multiple independent virtual binders with nine-pocket pages, add/remove card placement, drag-and-drop rearranging and page navigation
+- Regional Pokédex with undiscovered entries masked as `???`
 - Full-screen pack selection and swipe-to-rip interaction
 - Sparkle / staged card reveal
 - Starter / Premium / Elite / Legendary visual themes
 - Local prototype coin wallet and daily check-in
-- Local virtual inventory and virtual binder grid
+- Local virtual inventory and separate multi-binder storage
 - Daily challenge display, with trading challenges marked as coming soon
 - Service-worker precache entry and cache version bump
 
 Not yet implemented:
 - Supabase persistence or secure pack-opening RPC
-- TCGDex card catalogue ingestion and real rarity mapping
+- Full production TCGDex catalogue ingestion and robust species matching/rarity mapping
 - Reuse of the physical binder's nine-pocket component for virtual inventory
 - Friend collection visibility for virtual cards
 - Friend-to-friend and mystery trading
