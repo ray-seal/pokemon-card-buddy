@@ -17,6 +17,18 @@ let pickerSlot = null;
 function inventoryState() { return parse(localStorage.getItem(INVENTORY_KEY), { inventory: [], unlockedPokemon: [] }); }
 function inventory() { return inventoryState().inventory || []; }
 function activeBinder() { return binders.find((binder) => binder.id === activeId) || null; }
+function placedCardIds(except = null) {
+  const ids = new Set();
+  for (const item of binders) for (let p=0;p<(item.pages||[]).length;p++) {
+    const slots=item.pages[p]?.slots||[];
+    for (let s=0;s<slots.length;s++) {
+      if (except && item.id===activeId && p===except.pageIndex && s===except.slotIndex) continue;
+      if (slots[s]) ids.add(slots[s]);
+    }
+  }
+  return ids;
+}
+
 function persist() { localStorage.setItem(BINDERS_KEY, JSON.stringify(binders)); renderBinder(); }
 function ensureBinder() {
   if (!binders.length) binders = [{ id: uid(), name: 'My Virtual Binder', pages: [newPage()] }];
@@ -28,6 +40,16 @@ function ensureBinder() {
       while (page.slots.length < 9) page.slots.push(null);
       page.slots = page.slots.slice(0,9);
     }
+  }
+  // A single inventory instance can only occupy one pocket across all virtual binders.
+  const seen = new Set();
+  for (const item of binders) for (const page of item.pages) {
+    page.slots = page.slots.map(id => {
+      if (!id) return null;
+      if (seen.has(id)) return null;
+      seen.add(id);
+      return id;
+    });
   }
   localStorage.setItem(BINDERS_KEY, JSON.stringify(binders));
 }
@@ -118,17 +140,28 @@ function openPicker(index) {
   pickerSlot=index;
   const root=$('virtualBinderPickerCards');
   const cards=inventory();
-  if (!cards.length) {
-    const note=document.createElement('p');note.textContent='Open a virtual pack first. Your pulled cards will appear here.';root.replaceChildren(note);
+  const placed=placedCardIds({pageIndex,slotIndex:index});
+  const available=cards.filter(card=>!placed.has(card.id));
+  if (!available.length) {
+    const note=document.createElement('p');
+    note.textContent=cards.length ? 'All your card copies are already placed in a virtual binder. Remove one from a pocket to place it elsewhere.' : 'Open a virtual pack first. Your pulled cards will appear here.';
+    root.replaceChildren(note);
   } else {
-    root.replaceChildren(...cards.map((card)=>{
+    root.replaceChildren(...available.map((card)=>{
       const button=document.createElement('button');button.type='button';button.className='virtual-picker-card';
       const image=document.createElement('img');image.alt=card.name+' trading card';attachCardImage(image,card);
       const title=document.createElement('strong');title.textContent=card.name;
       const rarity=document.createElement('small');rarity.textContent=card.rarity;
       button.append(image,title,rarity);
       button.addEventListener('click',()=>{
-        const binder=activeBinder();binder.pages[pageIndex].slots[pickerSlot]=card.id;
+        const binder=activeBinder();
+        // Re-check at commit time so two open pickers cannot duplicate a card.
+        if (placedCardIds({pageIndex,slotIndex:pickerSlot}).has(card.id)) {
+          $('virtualBinderPicker').close();
+          renderBinder();
+          return;
+        }
+        binder.pages[pageIndex].slots[pickerSlot]=card.id;
         $('virtualBinderPicker').close();persist();
       });
       return button;
