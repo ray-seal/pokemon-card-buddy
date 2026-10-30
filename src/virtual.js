@@ -148,7 +148,7 @@ async function loadRegionalCatalogue(region) {
     if (!dexNumbers.length) throw new Error('Unknown Pokédex region');
     let cards = [];
     try {
-      const url = 'https://api.tcgdex.net/v2/en/cards?dexId=' + encodeURIComponent(dexNumbers.join('|'));
+      const url = 'https://api.tcgdex.net/v2/en/cards?dexId=' + encodeURIComponent('eq:' + dexNumbers.join('|'));
       const response = await fetch(url);
       if (response.ok) {
         const payload = await response.json();
