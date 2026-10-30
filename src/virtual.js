@@ -86,9 +86,9 @@ async function loadCardCatalogue() {
   })().catch((error) => { cardCataloguePromise = null; throw error; });
   return cardCataloguePromise;
 }
-function imageForCard(card, pokemon) {
-  if (card?.image) return card.image.replace(/\/$/, '') + '/high.webp';
-  return 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + (pokemon?.dexNumber || 25) + '.png';
+function imageForCard(card) {
+  // TCGDex card.image is the base URL for the actual card scan, not a Pokémon sprite.
+  return card?.image ? card.image.replace(/\\/$/, '') + '/high.webp' : '';
 }
 async function generateCards(pack) {
   let catalogue = [];
@@ -98,7 +98,7 @@ async function generateCards(pack) {
     if (!brief?.id) return brief;
     try {
       const response = await fetch('https://api.tcgdex.net/v2/en/cards/' + encodeURIComponent(brief.id));
-      return response.ok ? await response.json() : brief;
+      return response.ok ? { ...brief, ...(await response.json()) } : brief;
     } catch { return brief; }
   }));
   return detailed.map((source) => {
@@ -106,7 +106,7 @@ async function generateCards(pack) {
     const rarityIndex = rollRarity(pack);
     return {
       id: uid(), pokemonId: species?.id || null, dexNumber: species?.dexNumber || null, pokemonName: species?.name || '',
-      name: source?.name || species?.name || 'Mystery Pokémon', cardId: source?.id || null, image: imageForCard(source, species),
+      name: source?.name || species?.name || 'Mystery Pokémon', cardId: source?.id || null, image: imageForCard(source),
       setName: source?.set?.name || '', cardNumber: source?.localId || '', rarity: RARITIES[rarityIndex],
       rarityIndex, pack: pack.id, obtainedAt: new Date().toISOString(),
     };
@@ -167,7 +167,18 @@ function renderCurrentReveal() {
   const image = document.createElement('img');
   image.src = card.image;
   image.alt = card.name + ' Pokémon trading card';
-  image.onerror = () => { image.onerror = null; image.src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/' + card.dexNumber + '.png'; panel.classList.add('image-fallback'); };
+  let triedPng = false;
+  image.onerror = () => {
+    if (!triedPng && card.image.endsWith('/high.webp')) {
+      triedPng = true;
+      image.src = card.image.replace('/high.webp', '/high.png');
+      return;
+    }
+    image.onerror = null;
+    image.removeAttribute('src');
+    image.alt = 'Trading card image unavailable';
+    panel.classList.add('image-unavailable');
+  };
   const title = document.createElement('strong');
   title.textContent = card.name;
   const meta = document.createElement('small');
