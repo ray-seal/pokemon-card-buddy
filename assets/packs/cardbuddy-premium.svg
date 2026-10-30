@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 365 720" role="img" aria-label="CardBuddy PREMIUM booster pack">
+<defs>
+ <linearGradient id="foil" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#982bff"/><stop offset=".48" stop-color="#17052d"/><stop offset="1" stop-color="#982bff"/></linearGradient>
+ <radialGradient id="core"><stop stop-color="#982bff" stop-opacity=".8"/><stop offset="1" stop-color="#17052d" stop-opacity="0"/></radialGradient>
+ <linearGradient id="shine" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fff" stop-opacity=".0"/><stop offset=".5" stop-color="#fff" stop-opacity=".32"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+ <filter id="glow"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+ <pattern id="grain" width="9" height="9" patternUnits="userSpaceOnUse"><path d="M0 0L9 9M9 0L0 9" stroke="#fff" stroke-opacity=".055"/></pattern>
+</defs>
+<rect width="365" height="720" rx="18" fill="#030711"/>
+<rect x="7" y="7" width="351" height="706" rx="15" fill="url(#foil)" stroke="#e4baff" stroke-width="4"/>
+<rect x="12" y="12" width="341" height="696" rx="12" fill="url(#grain)"/>
+<path d="M12 55H353M12 665H353" stroke="#e4baff" stroke-width="9" stroke-dasharray="3 5"/>
+<path d="M22 90L343 155L22 220M343 90L22 155L343 220" fill="none" stroke="#e05aff" stroke-width="4" opacity=".8" filter="url(#glow)"/>
+<ellipse cx="182" cy="390" rx="170" ry="230" fill="url(#core)"/>
+<circle cx="182" cy="390" r="142" fill="none" stroke="#e4baff" stroke-opacity=".6" stroke-width="2"/>
+<circle cx="182" cy="390" r="126" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="1" stroke-dasharray="5 8"/>
+<path d="M182 205 C148 229 133 263 145 295 C157 327 185 344 179 376 C175 401 143 418 137 451 C131 482 161 503 190 493 C164 480 163 457 180 437 C202 412 231 407 240 377 C249 348 225 324 219 298 C212 269 230 245 253 229 C222 230 204 246 194 268 C194 242 190 222 182 205 Z M238 301 C263 310 278 332 273 354 C291 339 294 312 279 291 C265 273 246 268 230 271 Z" fill="#020610" stroke="#e4baff" stroke-width="4" stroke-linejoin="round" filter="url(#glow)"/>
+<path d="M180 310L200 326L190 346L212 364L181 355L164 377L168 345L146 330L174 331Z" fill="#e4baff" opacity=".8"/>
+<path d="M30 260L90 300L35 345M335 260L275 300L330 345M30 485L91 450L38 420M335 485L274 450L327 420" fill="none" stroke="#e05aff" stroke-width="5" opacity=".75"/>
+<path d="M0 0L365 0L365 720L0 720Z" fill="url(#shine)" opacity=".25"/>
+<path d="M135 115L153 86L182 104L211 86L230 115L211 140L182 126L153 140Z" fill="#e4baff" stroke="#fff" stroke-width="2"/>
+<text x="182" y="185" fill="#fff" font-family="Arial,sans-serif" font-size="39" font-weight="900" text-anchor="middle" letter-spacing="-1.5">CARDBUDDY</text>
+<path d="M42 195H323" stroke="#e4baff" stroke-width="3"/>
+<path d="M35 588H330L305 641H60Z" fill="#050914" stroke="#e4baff" stroke-width="4"/>
+<text x="182" y="622" fill="#e4baff" font-family="Arial,sans-serif" font-size="30" font-weight="900" text-anchor="middle" letter-spacing="4">PREMIUM</text>
+<text x="182" y="680" fill="#fff" font-family="Arial,sans-serif" font-size="12" font-weight="700" text-anchor="middle" letter-spacing="3">VIRTUAL BOOSTER</text>
+<path d="M20 25H345M20 695H345" stroke="#fff" stroke-opacity=".6" stroke-width="2"/>
+</svg>
