@@ -89,10 +89,10 @@ async function generateCards(pack) {
   try { catalogue = await loadCardCatalogue(); } catch { /* Use species artwork fallback if TCGDex is offline. */ }
   return Array.from({ length: pack.cards }, () => {
     const source = catalogue.length ? catalogue[Math.floor(Math.random() * catalogue.length)] : null;
-    const species = matchPokemon(source?.name) || POKEMON[Math.floor(Math.random() * POKEMON.length)];
+    const species = source ? matchPokemon(source.name) : POKEMON[Math.floor(Math.random() * POKEMON.length)];
     const rarityIndex = rollRarity(pack);
     return {
-      id: uid(), pokemonId: species.id, dexNumber: species.dexNumber, pokemonName: species.name,
+      id: uid(), pokemonId: species?.id || null, dexNumber: species?.dexNumber || null, pokemonName: species?.name || '',
       name: source?.name || species.name, cardId: source?.id || null, image: imageForCard(source, species),
       setName: source?.set?.name || '', cardNumber: source?.localId || '', rarity: RARITIES[rarityIndex],
       rarityIndex, pack: pack.id, obtainedAt: new Date().toISOString(),
