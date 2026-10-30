@@ -397,6 +397,7 @@ main { max-width:54rem; margin:0 auto; padding:0 1rem 2rem; }
 .virtual-pack-art.purple { background:radial-gradient(ellipse at 50% 70%,#8527e8,#230b4c 68%,#080313); border-color:#d7a0ff; box-shadow:0 0 35px #ae55ff55,inset 0 0 35px #d77bff55; }
 .virtual-pack-art.green { background:radial-gradient(ellipse at 50% 70%,#087f69,#052e2a 68%,#020d0c); border-color:#7bf0c4; box-shadow:0 0 35px #3affb555,inset 0 0 35px #4bffc155; }
 .virtual-pack-art.gold { background:radial-gradient(ellipse at 50% 70%,#b77a16,#48300a 68%,#100a02); border-color:#ffe39a; box-shadow:0 0 35px #ffcf5c77,inset 0 0 35px #ffcf5c77; }
+.virtual-pack-art { background-size:100% 100%; background-position:center; background-repeat:no-repeat; }
 .virtual-pack-art .pack-crown { font-size:4rem; color:#f4e9c6; text-shadow:0 0 22px white; }
 .virtual-pack-art strong { font-size:clamp(1.7rem,7vw,2.5rem); text-shadow:0 3px 12px #000; }
 .virtual-pack-art small { letter-spacing:.22em; font-weight:900; }
