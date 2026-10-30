@@ -74,28 +74,50 @@ function matchPokemon(cardName) {
 async function loadCardCatalogue() {
   if (cardCataloguePromise) return cardCataloguePromise;
   cardCataloguePromise = (async () => {
-    const cached = safeParse(sessionStorage.getItem('cardbuddy.tcgdex.catalogue.v1'));
+    const cached = safeParse(sessionStorage.getItem('cardbuddy.tcgdex.catalogue.v2'));
     if (Array.isArray(cached) && cached.length) return cached;
-    const response = await fetch('https://api.tcgdex.net/v2/en/cards?category=Pokemon');
-    if (!response.ok) throw new Error('TCGDex card catalogue is unavailable');
-    const cards = await response.json();
-    const pokemonCards = cards.filter((card) => card.image && card.name && card.id);
-    if (!pokemonCards.length) throw new Error('No Pokémon cards were returned by TCGDex');
-    try { sessionStorage.setItem('cardbuddy.tcgdex.catalogue.v1', JSON.stringify(pokemonCards)); } catch {}
-    return pokemonCards;
+    let cards = null;
+    for (const url of [
+      'https://api.tcgdex.net/v2/en/cards?category=Pokemon',
+      'https://api.tcgdex.net/v2/en/cards'
+    ]) {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) continue;
+        const payload = await response.json();
+        if (Array.isArray(payload) && payload.length) {
+          cards = payload.filter((card) => card.image && card.name && card.id && (!card.category || card.category === 'Pokemon'));
+          if (cards.length) break;
+        }
+      } catch { /* Try the unfiltered catalogue endpoint next. */ }
+    }
+    if (!cards?.length) throw new Error('TCGdex card catalogue is unavailable');
+    try { sessionStorage.setItem('cardbuddy.tcgdex.catalogue.v2', JSON.stringify(cards)); } catch {}
+    return cards;
   })().catch((error) => { cardCataloguePromise = null; throw error; });
   return cardCataloguePromise;
 }
 function imageForCard(card) {
-  // TCGDex card.image is the base URL for the actual card scan, not a Pokémon sprite.
-  return card?.image ? (card.image.endsWith('/') ? card.image.slice(0, -1) : card.image) + '/high.webp' : '';
+  const raw = String(card?.image || '').replace(/\/(?:high|low)\.(?:webp|png|jpg|svg)$/i, '').replace(/\/$/, '');
+  return raw ? raw + '/high.png' : '';
+}
+function attachCardImage(image, card) {
+  const raw = String(card?.image || '').replace(/\/(?:high|low)\.(?:webp|png|jpg|svg)$/i, '').replace(/\/$/, '');
+  if (!raw) { image.hidden = true; return; }
+  const formats = ['high.png','high.webp','high.jpg','low.png','low.webp','low.jpg'];
+  let index = 0;
+  image.onerror = () => {
+    index += 1;
+    if (index < formats.length) image.src = raw + '/' + formats[index];
+    else { image.onerror = null; image.removeAttribute('src'); image.alt = 'Trading card scan unavailable'; image.classList.add('image-unavailable'); }
+  };
+  image.src = raw + '/' + formats[index];
 }
 async function generateCards(pack) {
-  let catalogue = [];
-  try { catalogue = await loadCardCatalogue(); } catch { /* Use species artwork fallback if TCGDex is offline. */ }
-  const selected = Array.from({ length: pack.cards }, () => catalogue.length ? catalogue[Math.floor(Math.random() * catalogue.length)] : null);
+  const catalogue = await loadCardCatalogue();
+  if (!catalogue.length) throw new Error('No card scans are currently available');
+  const selected = Array.from({ length: pack.cards }, () => catalogue[Math.floor(Math.random() * catalogue.length)]);
   const detailed = await Promise.all(selected.map(async (brief) => {
-    if (!brief?.id) return brief;
     try {
       const response = await fetch('https://api.tcgdex.net/v2/en/cards/' + encodeURIComponent(brief.id));
       if (!response.ok) return brief;
@@ -104,11 +126,11 @@ async function generateCards(pack) {
     } catch { return brief; }
   }));
   return detailed.map((source) => {
-    const species = source ? matchPokemon(source.name) : POKEMON[Math.floor(Math.random() * POKEMON.length)];
+    const species = matchPokemon(source.name);
     const rarityIndex = rollRarity(pack);
     return {
       id: uid(), pokemonId: species?.id || null, dexNumber: species?.dexNumber || null, pokemonName: species?.name || '',
-      name: source?.name || species?.name || 'Mystery Pokémon', cardId: source?.id || null, image: imageForCard(source),
+      name: source.name || 'Unknown Pokémon', cardId: source.id || null, image: imageForCard(source),
       setName: source?.set?.name || '', cardNumber: source?.localId || '', rarity: RARITIES[rarityIndex],
       rarityIndex, pack: pack.id, obtainedAt: new Date().toISOString(),
     };
@@ -149,7 +171,14 @@ async function finishRip() {
   $('virtualCloseRip').hidden = true;
   $('virtualRipInstruction').textContent = 'The seal is breaking…';
   $('virtualSelectedPack').classList.add('is-ripping');
-  pendingCards = await generateCards(currentPack);
+  try { pendingCards = await generateCards(currentPack); }
+  catch (error) {
+    state.coins += currentPack.price; save(); ripStarted = false;
+    $('virtualSelectedPack').classList.remove('is-ripping');
+    $('virtualRipInstruction').textContent = 'Card scans are temporarily unavailable. Your coins have been returned. Please try again shortly.';
+    $('virtualCloseRip').hidden = false;
+    return;
+  }
   window.setTimeout(() => {
     revealIndex = 0;
     $('virtualSelectedPack').hidden = true;
