@@ -469,17 +469,35 @@ async function ensureTradeCatalogue() {
   tradeCatalogue = loadCardCatalogue().then(cards => { const eligible = cards.filter(card => card?.id && card?.name && card?.image && matchPokemon(card.name)); if (!eligible.length) throw new Error('No eligible Pokémon cards were returned by the catalogue'); return eligible; }).catch(error => { tradeCatalogue = null; throw error; });
   return tradeCatalogue;
 }
+function selectedTradeOffer() {
+  const offer = $('virtualTradeOffer');
+  const option = offer.options[offer.selectedIndex];
+  const index = option ? Number(option.dataset.inventoryIndex) : -1;
+  return Number.isInteger(index) && index >= 0 ? state.inventory[index] || null : null;
+}
+function syncTradeSelection() {
+  const npc = $('virtualTradeNpc').value;
+  const offered = selectedTradeOffer();
+  const tier = offered ? tradeRarity(offered) : null;
+  $('virtualTradeTarget').disabled = !offered || npc === 'mystery';
+  $('virtualTradeButton').disabled = !offered || (npc !== 'mystery' && !$('virtualTradeTarget').value);
+  $('virtualTradeRule').textContent = TRADE_NPCS[npc].description + (offered ? ' Offered rarity: ' + RARITIES[tier] + '.' : ' Select a card you own to begin.');
+}
 function renderTradeOptions() {
   const offer = $('virtualTradeOffer');
   const target = $('virtualTradeTarget');
   const npc = $('virtualTradeNpc').value;
-  const selectedId = String(offer.value || '');
+  const selected = selectedTradeOffer();
+  const selectedId = selected ? String(selected.id) : '';
   const inventory = [...state.inventory].sort((a,b) => String(a.name || '').localeCompare(String(b.name || '')));
-  offer.replaceChildren(new Option('Choose a card you own…',''), ...inventory.map(card =>
-    new Option(String(card.name || card.pokemonName || 'Unknown Pokémon') + ' · ' + RARITIES[tradeRarity(card)] + (state.inventory.filter(item => item.cardId && item.cardId === card.cardId).length === 1 ? ' · last copy' : ''), String(card.id))
-  ));
-  offer.value = selectedId;
-  const offered = inventory.find(card => String(card.id) === String(offer.value));
+  offer.replaceChildren(new Option('Choose a card you own…',''), ...inventory.map(card => {
+    const option = new Option(String(card.name || card.pokemonName || 'Unknown Pokémon') + ' · ' + RARITIES[tradeRarity(card)] + (state.inventory.filter(item => item.cardId && item.cardId === card.cardId).length === 1 ? ' · last copy' : ''), String(card.id));
+    option.dataset.inventoryIndex = String(state.inventory.indexOf(card));
+    return option;
+  }));
+  const selectedOption = [...offer.options].find(option => option.value === selectedId && selectedId);
+  if (selectedOption) offer.value = selectedOption.value;
+  const offered = selectedTradeOffer();
   const tier = offered ? tradeRarity(offered) : null;
   const catalogue = tradeCatalogue || [];
   const eligible = offered ? catalogue.filter(brief => {
@@ -492,9 +510,6 @@ function renderTradeOptions() {
     eligible.forEach(brief => target.add(new Option(brief.name + ' · ' + (brief.set?.name || brief.id), brief.id)));
     if (eligible.some(brief => brief.id === previous)) target.value = previous;
   }
-  target.disabled = !offered || npc === 'mystery';
-  $('virtualTradeRule').textContent = TRADE_NPCS[npc].description + (offered ? ' Offered rarity: ' + RARITIES[tier] + '.' : ' Select a card you own to begin.');
-  $('virtualTradeButton').disabled = !offered || (npc !== 'mystery' && !target.value);
   $('virtualTradeHistory').replaceChildren(...state.tradeHistory.slice(0,15).map(entry => {
     const row = document.createElement('article'); row.className = 'virtual-trade-history-row';
     const give = document.createElement('span'); give.textContent = 'Gave: ' + entry.gave + ' · ' + entry.gaveRarity;
@@ -505,6 +520,7 @@ function renderTradeOptions() {
   if (!state.tradeHistory.length) {
     const empty = document.createElement('p'); empty.className = 'note'; empty.textContent = 'No trades yet. Your first swap is waiting.'; $('virtualTradeHistory').append(empty);
   }
+  syncTradeSelection();
 }
 async function prepareTradeCatalogue() {
   $('virtualTradeRule').textContent = 'Loading the card catalogue…';
@@ -519,8 +535,7 @@ let pendingNpcTrade = null;
 async function makeNpcTrade() {
   const button = $('virtualTradeButton');
   if (button.disabled) return;
-  const offer = $('virtualTradeOffer').value;
-  const offered = state.inventory.find(card => card.id === offer);
+  const offered = selectedTradeOffer();
   const npc = $('virtualTradeNpc').value;
   if (!offered) { $('virtualTradeRule').textContent = 'Choose a card you actually own.'; return; }
   const tier = tradeRarity(offered);
@@ -593,7 +608,7 @@ document.querySelectorAll('[data-virtual-view]').forEach((button) => {
 });
 $('virtualCheckin').addEventListener('click', () => setVirtualView('rewards'));
 $('virtualTradeNpc').addEventListener('change', () => { pendingNpcTrade = null; $('virtualTradeReview').hidden = true; renderTradeOptions(); });
-$('virtualTradeOffer').addEventListener('change', () => { pendingNpcTrade = null; $('virtualTradeReview').hidden = true; renderTradeOptions(); });
+$('virtualTradeOffer').addEventListener('change', () => { pendingNpcTrade = null; $('virtualTradeReview').hidden = true; syncTradeSelection(); });
 $('virtualTradeTarget').addEventListener('change', renderTradeOptions);
 $('virtualTradeButton').addEventListener('click', makeNpcTrade);
 $('virtualTradeConfirm').addEventListener('click', completeNpcTrade);
