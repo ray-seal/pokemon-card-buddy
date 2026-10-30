@@ -55,11 +55,22 @@ function ensureBinder() {
 }
 function cardById(id) { return inventory().find((card) => card.id === id) || null; }
 function attachCardImage(img, card) {
-  const raw=String(card?.image||'').replace(/\/(?:high|low)\.(?:webp|png|jpg|svg)$/i,'').replace(/\/$/,'');
-  if(!raw){img.hidden=true;return;}
-  const formats=['high.png','high.webp','high.jpg','low.png','low.webp','low.jpg'];let index=0;
-  img.onerror=()=>{index++;if(index<formats.length){img.src=raw+'/'+formats[index];return;}img.onerror=null;img.removeAttribute('src');img.alt='Trading card scan unavailable';img.classList.add('image-unavailable');};
-  img.src=raw+'/'+formats[index];
+  const raw = String(card?.image || '').replace(/\/(?:high|low)\.(?:webp|png|jpg|svg)$/i, '').replace(/\/$/, '');
+  if (!raw) { img.hidden = true; return; }
+  // TCGdex serves WebP as its primary scan format. Try it first to avoid
+  // making every missing PNG wait through several failed requests.
+  const formats = ['high.webp', 'high.png', 'high.jpg', 'low.webp', 'low.png', 'low.jpg'];
+  let index = 0;
+  img.decoding = 'async';
+  img.onerror = () => {
+    index += 1;
+    if (index < formats.length) { img.src = raw + '/' + formats[index]; return; }
+    img.onerror = null;
+    img.removeAttribute('src');
+    img.alt = 'Trading card scan unavailable';
+    img.classList.add('image-unavailable');
+  };
+  img.src = raw + '/' + formats[index];
 }
 function showCard(card) {
   if (!card) return;
