@@ -51,7 +51,7 @@ function renderBinder() {
   $('virtualBinderName').textContent = binder.name;
   pageIndex = Math.max(0,Math.min(pageIndex,binder.pages.length-1));
   $('virtualBinderPageCount').textContent = 'Page ' + (pageIndex+1) + ' of ' + binder.pages.length;
-  $('virtualBinderStats').textContent = inventoryCards.length + ' cards in virtual inventory · ' + new Set(inventoryCards.map((card) => card.pokemonId).filter(Boolean)).size + ' Pokémon discovered';
+  $('virtualBinderStats').textContent = inventoryCards.length + ' cards in virtual inventory · ' + new Set(inventoryCards.map((card) => card.pokemonId).filter(Boolean)).size + ' Pokémon discovered. Tap an empty pocket to place a card from your inventory.';
   $('virtualBinderPageJump').replaceChildren(...binder.pages.map((page,index) => new Option('Page '+(index+1),String(index))));
   $('virtualBinderPageJump').value = String(pageIndex);
   $('virtualBinderPages').replaceChildren(...binder.pages[pageIndex].slots.map((cardId,index) => makeSlot(cardId,index)));
