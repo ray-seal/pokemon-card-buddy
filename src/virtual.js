@@ -59,10 +59,13 @@ function normaliseName(value) {
   return String(value || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 }
 function matchPokemon(cardName) {
+  const raw = String(cardName || '').toLowerCase();
+  if (raw.includes('nidoran') && raw.includes('♀')) return POKEMON.find((pokemon) => pokemon.dexNumber === 29) || null;
+  if (raw.includes('nidoran') && raw.includes('♂')) return POKEMON.find((pokemon) => pokemon.dexNumber === 32) || null;
   const name = normaliseName(cardName);
   return POKEMON.find((pokemon) => {
     const species = normaliseName(pokemon.name);
-    return name === species || name.startsWith(species);
+    return name === species || name.startsWith(species) || name.includes(species);
   }) || null;
 }
 async function loadCardCatalogue() {
