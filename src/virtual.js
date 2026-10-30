@@ -88,7 +88,7 @@ async function loadCardCatalogue() {
 }
 function imageForCard(card) {
   // TCGDex card.image is the base URL for the actual card scan, not a Pokémon sprite.
-  return card?.image ? card.image.replace(/\\/$/, '') + '/high.webp' : '';
+  return card?.image ? (card.image.endsWith('/') ? card.image.slice(0, -1) : card.image) + '/high.webp' : '';
 }
 async function generateCards(pack) {
   let catalogue = [];
