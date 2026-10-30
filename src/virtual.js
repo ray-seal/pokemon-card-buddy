@@ -18,12 +18,13 @@ const RARITIES = [
 const $ = (id) => document.getElementById(id);
 const safeParse = (value) => { try { return JSON.parse(value); } catch { return null; } };
 const today = () => new Date().toISOString().slice(0, 10);
-const freshState = () => ({ coins: 100, inventory: [], packsOpened: 0, daily: { date: today(), checkin: false, firstPack: false, fivePacks: false }, history: [] });
+const freshState = () => ({ coins: 100, inventory: [], packsOpened: 0, daily: { date: today(), checkin: false, firstPack: false, fivePacks: false, packsOpened: 0 }, history: [] });
 let state = safeParse(localStorage.getItem(STORE)) || freshState();
 let currentPack = null;
 let pendingCards = [];
 let selectedChoice = -1;
 let touchStartX = null;
+let ripStarted = false;
 
 function save() {
   localStorage.setItem(STORE, JSON.stringify(state));
@@ -32,7 +33,7 @@ function save() {
   renderChallenges();
 }
 function resetDaily() {
-  if (state.daily?.date !== today()) state.daily = { date: today(), checkin: false, firstPack: false, fivePacks: false };
+  if (state.daily?.date !== today()) state.daily = { date: today(), checkin: false, firstPack: false, fivePacks: false, packsOpened: 0 };\n  if (typeof state.daily.packsOpened !== 'number') state.daily.packsOpened = 0;
 }
 function renderWallet() { $('virtualCoins').textContent = state.coins.toLocaleString('en-GB'); }
 function packMarkup(pack, small = false) {
@@ -131,7 +132,7 @@ function completePack() {
   state.history.unshift({ date: new Date().toISOString(), pack: currentPack.id, cards: pendingCards.map((card) => card.id) });
   resetDaily();
   if (!state.daily.firstPack) { state.daily.firstPack = true; state.coins += 25; }
-  if (state.packsOpened >= 5 && !state.daily.fivePacks) { state.daily.fivePacks = true; state.coins += 75; }
+  if (state.daily.packsOpened >= 5 && !state.daily.fivePacks) { state.daily.fivePacks = true; state.coins += 75; }
   pendingCards = [];
   currentPack = null;
   $('virtualRipOverlay').hidden = true;
