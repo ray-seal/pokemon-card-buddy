@@ -133,27 +133,51 @@ async function loadRegionalCatalogue(region) {
   if (regionalCataloguePromises.has(region)) return regionalCataloguePromises.get(region);
   const promise = (async () => {
     const key = 'cardbuddy.tcgdex.region.v1.' + region.toLowerCase();
-    const cached = safeParse(sessionStorage.getItem(key));
-    if (Array.isArray(cached) && cached.length) return cached;
+    const cached = safeParse(sessionStorage.getItem(key)) || safeParse(localStorage.getItem(key));
+    if (Array.isArray(cached) && cached.length) {
+      try { sessionStorage.setItem(key, JSON.stringify(cached)); } catch {}
+      return cached;
+    }
     const dexNumbers = POKEMON.filter((pokemon) => pokemon.region === region).map((pokemon) => pokemon.dexNumber);
     if (!dexNumbers.length) throw new Error('Unknown Pokédex region');
-    const url = 'https://api.tcgdex.net/v2/en/cards?dexId=' + encodeURIComponent(dexNumbers.join('|'));
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Regional card catalogue is unavailable');
-    const payload = await response.json();
-    const cards = Array.isArray(payload) ? payload.filter((card) => card.id && card.name && card.image) : [];
+    let cards = [];
+    try {
+      const url = 'https://api.tcgdex.net/v2/en/cards?dexId=' + encodeURIComponent(dexNumbers.join('|'));
+      const response = await fetch(url);
+      if (response.ok) {
+        const payload = await response.json();
+        cards = Array.isArray(payload) ? payload.filter((card) => card.id && card.name && card.image) : [];
+      }
+    } catch { /* Try the saved all-card catalogue as a local fallback. */ }
+    if (!cards.length) {
+      const allCards = await loadCardCatalogue();
+      const regionIds = new Set(dexNumbers);
+      cards = allCards.filter((brief) => {
+        const species = matchPokemon(brief.name);
+        return species && regionIds.has(species.dexNumber);
+      });
+    }
     if (!cards.length) throw new Error('No cards are listed for ' + region);
     try { sessionStorage.setItem(key, JSON.stringify(cards)); } catch {}
+    try { localStorage.setItem(key, JSON.stringify(cards)); } catch {}
     return cards;
   })().catch((error) => { regionalCataloguePromises.delete(region); throw error; });
   regionalCataloguePromises.set(region, promise);
   return promise;
 }
 async function fetchCardDetail(brief) {
-  const response = await fetch('https://api.tcgdex.net/v2/en/cards/' + encodeURIComponent(brief.id));
-  if (!response.ok) return brief;
-  const detail = await response.json();
-  return { ...brief, ...detail, image: detail.image || brief.image };
+  const key = 'cardbuddy.tcgdex.card.v1.' + brief.id;
+  try {
+    const response = await fetch('https://api.tcgdex.net/v2/en/cards/' + encodeURIComponent(brief.id));
+    if (response.ok) {
+      const detail = await response.json();
+      const full = { ...brief, ...detail, image: detail.image || brief.image };
+      try { localStorage.setItem(key, JSON.stringify(full)); } catch {}
+      return full;
+    }
+  } catch { /* Reuse a previously retrieved full card when the API is offline. */ }
+  const cached = safeParse(localStorage.getItem(key));
+  return cached && cached.category === 'Pokemon' ? cached : brief;
 }
 function imageForCard(card) {
   const raw = String(card?.image || '').replace(/\/(?:high|low)\.(?:webp|png|jpg|svg)$/i, '').replace(/\/$/, '');
