@@ -449,9 +449,83 @@ function renderChallenges() {
 
 const TRADE_NPCS = {
   mystery: { name: 'Mystery Trader', description: 'Offer a card and receive a random card from the same rarity tier.' },
-  general: { name: 'General Collector', description: 'Choose any Pokémon card from the catalogue. The rarity tier must match.' },
-  kanto: { name: 'Kanto Keeper', description: 'Accepts cards from any region, but only offers Kanto Pokémon of matching rarity.' },
+  general: { name: 'General Collector', description: 'Choose a specific Pokémon from any region. The rarity tier must match.' },
+  bill: { name: 'Bill', region: 'Kanto', sprite: 'bill', era: 'Pokémon Red / Blue', bio: 'Born and raised in Kanto, Bill is best known for creating the Pokémon Storage System, giving Trainers a place to keep all the Pokémon they catch.', speciality: 'Kanto Pokémon and evolutionary oddities', description: 'Bill is the Kanto storage-system inventor. Offer a card and receive a random Kanto Pokémon of the same rarity.' },
+  kurt: { name: 'Kurt', region: 'Johto', sprite: 'kurt', era: 'Pokémon Gold / Silver', bio: 'The famous Azalea Town craftsman who makes special Poké Balls from Apricorns. Kurt knows a thing or two about unusual Pokémon.', speciality: 'Johto Pokémon and unusual finds', description: 'Kurt is Johto’s Apricorn Poké Ball craftsman. Offer a card and receive a random Johto Pokémon of the same rarity.' },
+  steven: { name: 'Steven Stone', region: 'Hoenn', sprite: 'steven-gen3', era: 'Pokémon Ruby / Sapphire', bio: 'The Hoenn Champion is a collector of rare stones. His curiosity for rare discoveries extends to the Pokémon he is willing to trade.', speciality: 'Rare Hoenn discoveries', description: 'Hoenn Champion and rare-stone collector, Steven offers a random Hoenn Pokémon of matching rarity.' },
+  cynthia: { name: 'Cynthia', region: 'Sinnoh', sprite: 'cynthia-gen7', era: 'Pokémon Diamond / Pearl', bio: 'Sinnoh’s Champion is fascinated by mythology and the ancient history of Pokémon. Her trades favour Pokémon with a story to tell.', speciality: 'Sinnoh discoveries and ancient species', description: 'Sinnoh Champion and mythology enthusiast, Cynthia offers a random Sinnoh Pokémon of matching rarity.' },
+  n: { name: 'N', region: 'Unova', sprite: 'n', era: 'Pokémon Black / White', bio: 'N believes Pokémon and people should understand one another. He seeks unusual partners and Pokémon with strong bonds.', speciality: 'Unova Pokémon and unusual partners', description: 'N is known for his unusual bond with Pokémon. He offers a random Unova Pokémon of matching rarity.' },
+  sycamore: { name: 'Professor Sycamore', region: 'Kalos', sprite: 'sycamore', era: 'Pokémon X / Y', bio: 'The Kalos Pokémon Professor studies evolution, especially the mysteries of Mega Evolution.', speciality: 'Kalos Pokémon and evolutionary lines', description: 'Professor Sycamore studies evolution and Mega Evolution. He offers a random Kalos Pokémon of matching rarity.' },
+  kukui: { name: 'Professor Kukui', region: 'Alola', sprite: 'kukui', era: 'Pokémon Sun / Moon', bio: 'A passionate researcher and battle enthusiast, Kukui helped bring the Alola League to life.', speciality: 'Alola Pokémon and battle-ready picks', description: 'Professor Kukui is an Alola researcher and battle enthusiast. He offers a random Alola Pokémon of matching rarity.' },
+  hop: { name: 'Hop', region: 'Galar', sprite: 'hop', era: 'Pokémon Sword / Shield', bio: 'Leon’s younger brother and a determined rival. Hop’s journey takes him from aspiring Champion to Pokémon researcher.', speciality: 'Galar Pokémon and surprising pairings', description: 'Hop is Galar’s determined rival who later pursues Pokémon research. He offers a random Galar Pokémon of matching rarity.' },
+  arven: { name: 'Arven', region: 'Paldea', sprite: 'arven-s', era: 'Pokémon Scarlet / Violet', bio: 'A student with a talent for cooking and a knack for tracking down rare ingredients and Pokémon in Paldea’s wild areas.', speciality: 'Paldean Pokémon and habitat finds', description: 'Arven is a Paldea student, cook and explorer. He offers a random Paldea Pokémon of matching rarity.' },
 };
+const REGIONAL_TRADERS = ['bill','kurt','steven','cynthia','n','sycamore','kukui','hop','arven'];
+function traderUnlocked(id) {
+  const trader = TRADE_NPCS[id];
+  if (!trader?.region) return true;
+  return state.unlockedPokemon.some(speciesId => POKEMON.find(pokemon => pokemon.id === speciesId)?.region === trader.region);
+}
+function refreshTraderUnlocks() {
+  const select = $('virtualTradeNpc');
+  for (const option of select.options) {
+    if (REGIONAL_TRADERS.includes(option.value)) option.disabled = !traderUnlocked(option.value);
+  }
+  renderTraderGallery();
+}
+function renderTraderGallery() {
+  const gallery = $('virtualTraderGallery');
+  if (!gallery) return;
+  gallery.replaceChildren(...REGIONAL_TRADERS.map(id => {
+    const trader = TRADE_NPCS[id];
+    const unlocked = traderUnlocked(id);
+    const card = document.createElement('article');
+    card.className = 'virtual-trader-card' + (unlocked ? ' is-unlocked' : ' is-locked');
+    card.tabIndex = unlocked ? 0 : -1;
+    card.setAttribute('role', unlocked ? 'button' : 'group');
+    card.setAttribute('aria-label', trader.name + ', ' + trader.region + (unlocked ? ', select trader' : ', locked'));
+    if (unlocked) {
+      const selectTrader = () => {
+        $('virtualTradeNpc').value = id;
+        pendingNpcTrade = null;
+        $('virtualTradeReview').hidden = true;
+        renderTradeOptions();
+        $('virtualTradeNpc').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      };
+      card.addEventListener('click', selectTrader);
+      card.addEventListener('keydown', event => {
+        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); selectTrader(); }
+      });
+    }
+    const portrait = document.createElement('div'); portrait.className = 'virtual-trader-portrait';
+    const image = document.createElement('img');
+    image.src = 'https://play.pokemonshowdown.com/sprites/trainers/' + trader.sprite + '.png';
+    image.alt = trader.name + ' character artwork'; image.loading = 'lazy'; image.decoding = 'async';
+    image.onerror = () => { image.hidden = true; portrait.classList.add('sprite-unavailable'); };
+    portrait.append(image);
+    const details = document.createElement('div'); details.className = 'virtual-trader-details';
+    const name = document.createElement('strong'); name.textContent = trader.name;
+    const region = document.createElement('small'); region.textContent = trader.region + ' · ' + trader.era;
+    const bio = document.createElement('p'); bio.textContent = unlocked ? trader.bio : 'Discover a Pokémon in the ' + trader.region + ' Pokédex to meet this trader.';
+    const status = document.createElement('span'); status.textContent = unlocked ? 'Available to trade' : '🔒 Discover this region to unlock';
+    details.append(name, region, bio, status); card.append(portrait, details);
+    return card;
+  }));
+}
+function renderTraderProfile() {
+  const id = $('virtualTradeNpc').value, trader = TRADE_NPCS[id], profile = $('virtualTradeNpcProfile');
+  if (!profile || !trader) return;
+  profile.replaceChildren();
+  if (!trader.region) { const text = document.createElement('p'); text.className = 'note'; text.textContent = trader.description; profile.append(text); return; }
+  const unlocked = traderUnlocked(id), image = document.createElement('img');
+  image.src = 'https://play.pokemonshowdown.com/sprites/trainers/' + trader.sprite + '.png';
+  image.alt = trader.name + ' character artwork'; image.loading = 'lazy'; image.decoding = 'async'; image.onerror = () => { image.hidden = true; };
+  const copy = document.createElement('div'), title = document.createElement('strong');
+  title.textContent = trader.name + ' · ' + trader.region;
+  const lore = document.createElement('p'); lore.textContent = unlocked ? trader.bio : 'Discover at least one Pokémon in the ' + trader.region + ' Pokédex to unlock this trader.';
+  const status = document.createElement('small'); status.textContent = unlocked ? 'Regional trader · same trade rules as the other NPCs' : 'Locked · Regional Pokédex discovery required';
+  copy.append(title, lore, status); profile.append(image, copy);
+}
 function tradeRarity(card) {
   const index = Number.isInteger(card?.rarityIndex) ? card.rarityIndex : 0;
   return Math.max(0, Math.min(RARITIES.length - 1, index));
@@ -487,16 +561,18 @@ function syncTradeSelection() {
   const npc = $('virtualTradeNpc').value;
   const offered = selectedTradeOffer();
   const tier = offered ? tradeRarity(offered) : null;
-  $('virtualTradeTarget').disabled = !offered || npc === 'mystery';
-  $('virtualTradeButton').disabled = !offered || (npc !== 'mystery' && !$('virtualTradeTarget').value);
-  $('virtualTradeRule').textContent = TRADE_NPCS[npc].description + (offered ? ' Offered rarity: ' + RARITIES[tier] + '.' : ' Select a card you own to begin.');
+  $('virtualTradeTarget').disabled = !offered || npc === 'mystery' || !traderUnlocked(npc);
+  $('virtualTradeButton').disabled = !offered || !traderUnlocked(npc) || (npc === 'general' && !$('virtualTradeTarget').value);
+  $('virtualTradeTargetField').hidden = npc !== 'general';
+  $('virtualTradeRule').textContent = (traderUnlocked(npc) ? TRADE_NPCS[npc].description : 'Discover a Pokémon in this region’s Pokédex to unlock this trader.') + (offered ? ' Offered rarity: ' + RARITIES[tier] + '.' : ' Select a card you own to begin.');
+  renderTraderProfile();
 }
-function renderTradeOptions() {
+function renderTradeOptions(preferredOfferId = '') {
   const offer = $('virtualTradeOffer');
   const target = $('virtualTradeTarget');
   const npc = $('virtualTradeNpc').value;
   const selected = selectedTradeOffer();
-  const selectedId = selected ? String(selected.id) : '';
+  const selectedId = selected ? String(selected.id) : String(preferredOfferId || '');
   const inventory = [...state.inventory].sort((a,b) => String(a.name || '').localeCompare(String(b.name || '')));
   offer.replaceChildren(new Option('Choose a card you own…',''), ...inventory.map(card => {
     const option = new Option(String(card.name || card.pokemonName || 'Unknown Pokémon') + ' · ' + RARITIES[tradeRarity(card)] + (state.inventory.filter(item => item.cardId && item.cardId === card.cardId).length === 1 ? ' · last copy' : ''), String(card.id));
@@ -510,11 +586,12 @@ function renderTradeOptions() {
   const catalogue = tradeCatalogue || [];
   const eligible = offered ? catalogue.filter(brief => {
     const species = matchPokemon(brief.name);
-    return brief.id !== offered.cardId && (npc !== 'kanto' || species?.region === 'Kanto');
+    const trader = TRADE_NPCS[npc];
+    return brief.id !== offered.cardId && (npc !== 'general' && npc !== 'mystery' ? species?.region === trader.region : true);
   }) : [];
   const previous = target.value;
-  target.replaceChildren(new Option(npc === 'mystery' ? 'Random matching card' : 'Choose a return card…', ''));
-  if (npc !== 'mystery' && offered) {
+  target.replaceChildren(new Option('Choose a return card…', ''));
+  if (npc === 'general' && offered) {
     eligible.forEach(brief => target.add(new Option(brief.name + ' · ' + (brief.set?.name || brief.id), brief.id)));
     if (eligible.some(brief => brief.id === previous)) target.value = previous;
   }
@@ -536,6 +613,7 @@ async function prepareTradeCatalogue() {
   catch { $('virtualTradeRule').textContent = 'The card catalogue is unavailable right now. Try again shortly.'; }
 }
 function renderTradeHub() {
+  refreshTraderUnlocks();
   renderTradeOptions();
   void prepareTradeCatalogue();
 }
@@ -547,16 +625,18 @@ async function makeNpcTrade() {
   const npc = $('virtualTradeNpc').value;
   if (!offered) { $('virtualTradeRule').textContent = 'Choose a card you actually own.'; return; }
   const tier = tradeRarity(offered);
+  if (!traderUnlocked(npc)) { $('virtualTradeRule').textContent = 'Discover a Pokémon in this region’s Pokédex before trading here.'; return; }
   button.disabled = true;
   button.textContent = 'Preparing trade…';
   try {
     const catalogue = await ensureTradeCatalogue();
     const pool = catalogue.filter(brief => {
       const species = matchPokemon(brief.name);
-      return brief.id !== offered.cardId && (npc !== 'kanto' || species?.region === 'Kanto');
+      const trader = TRADE_NPCS[npc];
+      return brief.id !== offered.cardId && (npc !== 'general' && npc !== 'mystery' ? species?.region === trader.region : true);
     });
     if (!pool.length) { $('virtualTradeRule').textContent = 'No eligible return cards are available right now.'; return; }
-    const chosenId = npc === 'mystery' ? null : $('virtualTradeTarget').value;
+    const chosenId = npc === 'general' ? $('virtualTradeTarget').value : null;
     const brief = chosenId ? pool.find(card => card.id === chosenId) : pool[Math.floor(Math.random() * pool.length)];
     if (!brief) { $('virtualTradeRule').textContent = 'Choose a valid return card.'; return; }
     const returnCard = tradeCardFromBrief(brief, tier);
@@ -597,9 +677,9 @@ function completeNpcTrade() {
   $('virtualTradeReview').hidden = true;
   save();
   window.dispatchEvent(new CustomEvent('cardbuddy-virtual-inventory-updated'));
-  renderTradeOptions();
+  renderTradeOptions(returnCard.id);
   renderPacks();
-  $('virtualTradeRule').textContent = 'Trade complete! ' + returnCard.name + ' has been added to your virtual collection.';
+  $('virtualTradeRule').textContent = 'Trade complete! ' + returnCard.name + ' has been added to your virtual collection. It is selected and ready to trade again.';
 }
 
 function setVirtualView(view) {

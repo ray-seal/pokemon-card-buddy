@@ -186,18 +186,28 @@
       </section>
       <section id="virtualTradesView" class="virtual-view" hidden>
         <div class="virtual-pack-intro"><h3>NPC Trade Hub</h3><p>Swap one of your virtual cards for another card of the same rarity tier. These trades are local to this device.</p></div>
+        <div id="virtualTraderGallery" class="virtual-trader-gallery" aria-label="Regional trader gallery"></div>
         <div class="virtual-trade-panel">
+          <div id="virtualTradeNpcProfile" class="virtual-trader-profile" aria-live="polite"></div>
           <label>Choose your trader
             <select id="virtualTradeNpc">
               <option value="mystery">Mystery Trader</option>
               <option value="general">General Collector</option>
-              <option value="kanto">Kanto Keeper</option>
+              <option value="bill" disabled>Bill · Kanto</option>
+              <option value="kurt" disabled>Kurt · Johto</option>
+              <option value="steven" disabled>Steven Stone · Hoenn</option>
+              <option value="cynthia" disabled>Cynthia · Sinnoh</option>
+              <option value="n" disabled>N · Unova</option>
+              <option value="sycamore" disabled>Professor Sycamore · Kalos</option>
+              <option value="kukui" disabled>Professor Kukui · Alola</option>
+              <option value="hop" disabled>Hop · Galar</option>
+              <option value="arven" disabled>Arven · Paldea</option>
             </select>
           </label>
           <label>Card you are offering
             <select id="virtualTradeOffer"><option value="">Choose a card you own…</option></select>
           </label>
-          <label>Card you want in return
+          <label id="virtualTradeTargetField" hidden>Card you want in return
             <select id="virtualTradeTarget" disabled><option value="">Choose a return card…</option></select>
           </label>
           <p id="virtualTradeRule" class="note" role="status">Mystery Trader chooses a random card of matching rarity.</p>

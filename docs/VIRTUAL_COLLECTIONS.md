@@ -104,3 +104,15 @@ Not yet implemented:
 - Server-side anti-farming, transaction ledger and reward claims
 
 These items are deliberately separated so the visual prototype cannot be mistaken for a secure, production-ready trading economy.
+
+
+## Regional NPC trader gallery prototype
+
+The regional trader gallery adds Bill (Kanto), Kurt (Johto), Steven (Hoenn), Cynthia (Sinnoh), N (Unova), Professor Sycamore (Kalos), Professor Kukui (Alola), Hop (Galar) and Arven (Paldea). Each regional trader unlocks after the player discovers at least one Pokémon in that region's Pokédex. The existing Mystery Trader and General Collector remain available. Bill replaces Kanto Keeper.
+
+Regional characters are region-specific traders. Each offers a random Pokémon from their own region, matching the rarity tier of the card offered. Mystery Trader offers a random Pokémon from any region. General Collector lets the player choose a specific Pokémon from any region. All trades use the same review and confirmation flow. Portraits currently reference the Pokémon Showdown trainer-sprite archive; these are convenient prototype assets rather than a verified set of original game-ripped assets. Review provenance and artist credit requirements before public release, and replace any portrait that does not meet the intended art direction.
+
+
+## Regional trader gallery scope clarification
+
+The regional character gallery presents name, character artwork, region/game-era label and short lore description. Bill replaces the former Kanto Keeper entry. Mystery Trader and General Collector remain. Regional characters unlock after the player discovers at least one Pokémon in that region's Pokédex. Selecting an unlocked gallery portrait selects that trader in the existing trade panel. Mystery Trader offers a random Pokémon from any region; each regional character offers a random Pokémon from their own region; General Collector allows a specific Pokémon to be selected from any region. Every trade matches the rarity tier of the offered card and uses the shared review and confirmation flow.
