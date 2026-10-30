@@ -98,7 +98,9 @@ async function generateCards(pack) {
     if (!brief?.id) return brief;
     try {
       const response = await fetch('https://api.tcgdex.net/v2/en/cards/' + encodeURIComponent(brief.id));
-      return response.ok ? { ...brief, ...(await response.json()) } : brief;
+      if (!response.ok) return brief;
+      const detail = await response.json();
+      return { ...brief, ...detail, image: detail.image || brief.image };
     } catch { return brief; }
   }));
   return detailed.map((source) => {
