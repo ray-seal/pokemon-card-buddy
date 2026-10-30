@@ -564,7 +564,7 @@ function completeNpcTrade() {
   });
   state.tradeHistory = state.tradeHistory.slice(0,100);
   pendingNpcTrade = null;
-  $('virtualTradeReview').close();
+  $('virtualTradeReview').hidden = true;
   save();
   window.dispatchEvent(new CustomEvent('cardbuddy-virtual-inventory-updated'));
   renderTradeOptions();
@@ -590,7 +590,7 @@ $('virtualTradeOffer').addEventListener('change', () => { pendingNpcTrade = null
 $('virtualTradeTarget').addEventListener('change', renderTradeOptions);
 $('virtualTradeButton').addEventListener('click', makeNpcTrade);
 $('virtualTradeConfirm').addEventListener('click', completeNpcTrade);
-$('virtualTradeCancel').addEventListener('click', () => { pendingNpcTrade = null; $('virtualTradeReview').close(); });
+$('virtualTradeCancel').addEventListener('click', () => { pendingNpcTrade = null; $('virtualTradeReview').hidden = true; });
 
 $('virtualCloseRip').addEventListener('click', () => {
   if (currentPack && !ripStarted) state.coins += currentPack.price;
