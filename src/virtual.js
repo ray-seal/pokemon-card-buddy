@@ -450,7 +450,7 @@ function renderChallenges() {
 const TRADE_NPCS = {
   mystery: { name: 'Mystery Trader', description: 'Offer a card and receive a random card from the same rarity tier.' },
   general: { name: 'General Collector', description: 'Choose any Pokémon card from the catalogue. The rarity tier must match.' },
-  kanto: { name: 'Kanto Keeper', description: 'Accepts cards from any region, but only offers Kanto Pokémon of matching rarity.' },
+  kanto: { name: 'Kanto Keeper', filterRegion: 'Kanto', description: 'Accepts cards from any region, but only offers Kanto Pokémon of matching rarity.' },
   bill: { name: 'Bill', region: 'Kanto', sprite: 'bill', era: 'Pokémon Red / Blue', bio: 'Born and raised in Kanto, Bill is best known for creating the Pokémon Storage System, giving Trainers a place to keep all the Pokémon they catch.', speciality: 'Kanto Pokémon and evolutionary oddities', description: 'Bill specialises in Kanto Pokémon. He accepts cards from any region and offers Kanto Pokémon of matching rarity.', filterRegion: 'Kanto' },
   kurt: { name: 'Kurt', region: 'Johto', sprite: 'kurt', era: 'Pokémon Gold / Silver', bio: 'The famous Azalea Town craftsman who makes special Poké Balls from Apricorns. Kurt knows a thing or two about unusual Pokémon.', speciality: 'Johto Pokémon and unusual finds', description: 'Kurt offers Johto Pokémon of matching rarity.', filterRegion: 'Johto' },
   steven: { name: 'Steven Stone', region: 'Hoenn', sprite: 'steven-gen3', era: 'Pokémon Ruby / Sapphire', bio: 'The Hoenn Champion is a collector of rare stones. His curiosity for rare discoveries extends to the Pokémon he is willing to trade.', speciality: 'Rare Hoenn discoveries', description: 'Steven offers Hoenn Pokémon of matching rarity.', filterRegion: 'Hoenn' },
@@ -466,6 +466,13 @@ function traderUnlocked(id) {
   const trader = TRADE_NPCS[id];
   if (!trader?.region) return true;
   return state.unlockedPokemon.some(speciesId => POKEMON.find(pokemon => pokemon.id === speciesId)?.region === trader.region);
+}
+function refreshTraderUnlocks() {
+  const select = $('virtualTradeNpc');
+  for (const option of select.options) {
+    if (REGIONAL_TRADERS.includes(option.value)) option.disabled = !traderUnlocked(option.value);
+  }
+  renderTraderGallery();
 }
 function renderTraderGallery() {
   const gallery = $('virtualTraderGallery');
@@ -590,7 +597,7 @@ async function prepareTradeCatalogue() {
   catch { $('virtualTradeRule').textContent = 'The card catalogue is unavailable right now. Try again shortly.'; }
 }
 function renderTradeHub() {
-  renderTraderGallery();
+  refreshTraderUnlocks();
   renderTradeOptions();
   void prepareTradeCatalogue();
 }
