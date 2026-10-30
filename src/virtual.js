@@ -567,12 +567,12 @@ function syncTradeSelection() {
   $('virtualTradeRule').textContent = (traderUnlocked(npc) ? TRADE_NPCS[npc].description : 'Discover a Pokémon in this region’s Pokédex to unlock this trader.') + (offered ? ' Offered rarity: ' + RARITIES[tier] + '.' : ' Select a card you own to begin.');
   renderTraderProfile();
 }
-function renderTradeOptions() {
+function renderTradeOptions(preferredOfferId = '') {
   const offer = $('virtualTradeOffer');
   const target = $('virtualTradeTarget');
   const npc = $('virtualTradeNpc').value;
   const selected = selectedTradeOffer();
-  const selectedId = selected ? String(selected.id) : '';
+  const selectedId = selected ? String(selected.id) : String(preferredOfferId || '');
   const inventory = [...state.inventory].sort((a,b) => String(a.name || '').localeCompare(String(b.name || '')));
   offer.replaceChildren(new Option('Choose a card you own…',''), ...inventory.map(card => {
     const option = new Option(String(card.name || card.pokemonName || 'Unknown Pokémon') + ' · ' + RARITIES[tradeRarity(card)] + (state.inventory.filter(item => item.cardId && item.cardId === card.cardId).length === 1 ? ' · last copy' : ''), String(card.id));
@@ -677,9 +677,9 @@ function completeNpcTrade() {
   $('virtualTradeReview').hidden = true;
   save();
   window.dispatchEvent(new CustomEvent('cardbuddy-virtual-inventory-updated'));
-  renderTradeOptions();
+  renderTradeOptions(returnCard.id);
   renderPacks();
-  $('virtualTradeRule').textContent = 'Trade complete! ' + returnCard.name + ' has been added to your virtual collection.';
+  $('virtualTradeRule').textContent = 'Trade complete! ' + returnCard.name + ' has been added to your virtual collection. It is selected and ready to trade again.';
 }
 
 function setVirtualView(view) {
