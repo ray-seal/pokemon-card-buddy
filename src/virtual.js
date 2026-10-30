@@ -238,7 +238,7 @@ function renderChallenges() {
     const copy = document.createElement('div');
     const title = document.createElement('strong'); title.textContent = challenge.title;
     const description = document.createElement('p');
-    description.textContent = challenge.description + (challenge.locked ? ' · Coming soon' : challenge.earned ? ' · Ready to claim' : challenge.done ? ' · Claimed' : ' · Keep playing');
+    description.textContent = challenge.description + (challenge.locked ? ' · Coming soon' : challenge.done ? ' · Claimed' : challenge.earned ? ' · Ready to claim' : ' · Keep playing');
     copy.append(title, description);
     const action = document.createElement('div'); action.className = 'virtual-challenge-action';
     if (challenge.locked) {
