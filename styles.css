@@ -349,7 +349,8 @@ main { max-width:54rem; margin:0 auto; padding:0 1rem 2rem; }
 .virtual-pack-intro p { margin:.25rem 0; color:var(--muted); font-size:.9rem; }
 .virtual-pack-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.8rem; }
 .virtual-pack-card { min-width:0; overflow:hidden; border:1px solid #344260; border-radius:1rem; background:linear-gradient(145deg,#151e32,#0d1321); box-shadow:0 10px 28px #0004; }
-.virtual-pack-face { position:relative; isolation:isolate; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:.4rem; aspect-ratio: .78; margin:.7rem; overflow:hidden; border:2px solid #9bcaff88; border-radius:.7rem; background:radial-gradient(ellipse at 50% 68%,#1269d8,#07172f 62%,#020711); box-shadow:inset 0 0 22px #63b9ff66,0 0 18px #2e8dff25; color:white; text-align:center; }
+.virtual-pack-face { position:relative; isolation:isolate; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:.4rem; aspect-ratio: .52; margin:.7rem; overflow:hidden; border:2px solid #9bcaff88; border-radius:.7rem; background:radial-gradient(ellipse at 50% 68%,#1269d8,#07172f 62%,#020711); box-shadow:inset 0 0 22px #63b9ff66,0 0 18px #2e8dff25; color:white; text-align:center; }
+.virtual-pack-face img { position:absolute; inset:0; width:100%; height:100%; object-fit:fill; }
 .virtual-pack-face::before { content:""; position:absolute; inset:8% 5%; border:1px solid #ffffff6b; transform:skewY(-8deg); z-index:-1; }
 .virtual-pack-face::after { content:""; position:absolute; width:150%; height:45%; top:45%; left:-25%; transform:rotate(-22deg); background:linear-gradient(90deg,transparent,#ffffff20,transparent); z-index:-1; }
 .virtual-pack-face strong { font-size:clamp(.9rem,3.2vw,1.35rem); letter-spacing:-.04em; text-shadow:0 2px 8px #000; }
@@ -386,13 +387,13 @@ main { max-width:54rem; margin:0 auto; padding:0 1rem 2rem; }
 .virtual-rip-instruction { margin:.2rem 0 1.2rem; text-align:center; font-size:clamp(1.35rem,5vw,2rem); }
 .virtual-choice-grid { width:min(100%,30rem); display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.65rem; }
 .virtual-choice { min-width:0; padding:0; border:0; background:transparent; box-shadow:none; }
-.virtual-choice .virtual-pack-face { width:100%; margin:0; aspect-ratio:.68; }
+.virtual-choice .virtual-pack-face { width:100%; margin:0; aspect-ratio:.52; }
 .virtual-choice .virtual-pack-face strong { font-size:clamp(.48rem,2vw,.8rem); }
 .virtual-choice .virtual-pack-face small { font-size:.38rem; }
 .virtual-choice .virtual-pack-face .pack-crown { font-size:1.25rem; }
 .virtual-choice:active { transform:scale(.96); }
 .virtual-selected-pack { width:min(78vw,22rem); display:flex; flex-direction:column; align-items:center; }
-.virtual-pack-art { width:100%; aspect-ratio:.68; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:.7rem; position:relative; overflow:hidden; border:3px solid #9bd7ff; border-radius:1rem; background:radial-gradient(ellipse at 50% 70%,#1269d8,#06172f 68%,#020711); box-shadow:0 0 35px #4aaeff55,inset 0 0 35px #77caff55; touch-action:pan-y; user-select:none; }
+.virtual-pack-art { width:100%; aspect-ratio:.52; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:.7rem; position:relative; overflow:hidden; border:3px solid #9bd7ff; border-radius:1rem; background:radial-gradient(ellipse at 50% 70%,#1269d8,#06172f 68%,#020711); box-shadow:0 0 35px #4aaeff55,inset 0 0 35px #77caff55; touch-action:pan-y; user-select:none; background-size:100% 100%; background-position:center; background-repeat:no-repeat; }
 .virtual-pack-art.purple { background:radial-gradient(ellipse at 50% 70%,#8527e8,#230b4c 68%,#080313); border-color:#d7a0ff; box-shadow:0 0 35px #ae55ff55,inset 0 0 35px #d77bff55; }
 .virtual-pack-art.green { background:radial-gradient(ellipse at 50% 70%,#087f69,#052e2a 68%,#020d0c); border-color:#7bf0c4; box-shadow:0 0 35px #3affb555,inset 0 0 35px #4bffc155; }
 .virtual-pack-art.gold { background:radial-gradient(ellipse at 50% 70%,#b77a16,#48300a 68%,#100a02); border-color:#ffe39a; box-shadow:0 0 35px #ffcf5c77,inset 0 0 35px #ffcf5c77; }
