@@ -138,7 +138,10 @@
         <div class="virtual-daily"><div><strong>Daily check-in</strong><p id="virtualCheckinStatus">Collect your daily 25 coins.</p></div><button id="virtualCheckin" type="button">View rewards</button></div>
         <div class="virtual-pack-intro"><h3>Choose your pack</h3><p>Eight packs appear for every opening. Pick your favourite and rip it open.</p></div>
         <div id="virtualPackGrid" class="virtual-pack-grid"></div>
-        <p class="virtual-prototype-note">Testing preview: coins and virtual cards are stored on this device only. Secure cloud packs and trading will be enabled after the backend migration is installed.</p>
+        <div class="virtual-pack-intro regional-pack-heading"><h3>Regional packs</h3><p>Only Pokémon native to your chosen region. Card artwork and sets can be from any era.</p></div>
+        <label class="regional-pack-region">Choose region <select id="virtualRegionalPackRegion" aria-label="Choose regional booster region"></select></label>
+        <div id="virtualRegionalPackGrid" class="virtual-pack-grid"></div>
+        <p class="virtual-prototype-note">Regional packs guarantee Pokémon from the selected Pokédex region. Card artwork can be from any set or generation. Coins and virtual cards are stored on this device.</p>
       </section>
       <section id="virtualBinderView" class="virtual-view" hidden>
         <div class="binder-toolbar virtual-binder-toolbar">
