@@ -70,10 +70,10 @@ async function loadCardCatalogue() {
   cardCataloguePromise = (async () => {
     const cached = safeParse(sessionStorage.getItem('cardbuddy.tcgdex.catalogue.v1'));
     if (Array.isArray(cached) && cached.length) return cached;
-    const response = await fetch('https://api.tcgdex.net/v2/en/cards');
+    const response = await fetch('https://api.tcgdex.net/v2/en/cards?category=Pokemon');
     if (!response.ok) throw new Error('TCGDex card catalogue is unavailable');
     const cards = await response.json();
-    const pokemonCards = cards.filter((card) => String(card.category || '').toLowerCase() === 'pokemon' && card.image && card.name);
+    const pokemonCards = cards.filter((card) => card.image && card.name && card.id);
     if (!pokemonCards.length) throw new Error('No Pokémon cards were returned by TCGDex');
     try { sessionStorage.setItem('cardbuddy.tcgdex.catalogue.v1', JSON.stringify(pokemonCards)); } catch {}
     return pokemonCards;
@@ -87,13 +87,20 @@ function imageForCard(card, pokemon) {
 async function generateCards(pack) {
   let catalogue = [];
   try { catalogue = await loadCardCatalogue(); } catch { /* Use species artwork fallback if TCGDex is offline. */ }
-  return Array.from({ length: pack.cards }, () => {
-    const source = catalogue.length ? catalogue[Math.floor(Math.random() * catalogue.length)] : null;
+  const selected = Array.from({ length: pack.cards }, () => catalogue.length ? catalogue[Math.floor(Math.random() * catalogue.length)] : null);
+  const detailed = await Promise.all(selected.map(async (brief) => {
+    if (!brief?.id) return brief;
+    try {
+      const response = await fetch('https://api.tcgdex.net/v2/en/cards/' + encodeURIComponent(brief.id));
+      return response.ok ? await response.json() : brief;
+    } catch { return brief; }
+  }));
+  return detailed.map((source) => {
     const species = source ? matchPokemon(source.name) : POKEMON[Math.floor(Math.random() * POKEMON.length)];
     const rarityIndex = rollRarity(pack);
     return {
       id: uid(), pokemonId: species?.id || null, dexNumber: species?.dexNumber || null, pokemonName: species?.name || '',
-      name: source?.name || species.name, cardId: source?.id || null, image: imageForCard(source, species),
+      name: source?.name || species?.name || 'Mystery Pokémon', cardId: source?.id || null, image: imageForCard(source, species),
       setName: source?.set?.name || '', cardNumber: source?.localId || '', rarity: RARITIES[rarityIndex],
       rarityIndex, pack: pack.id, obtainedAt: new Date().toISOString(),
     };
