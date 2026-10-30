@@ -111,3 +111,8 @@ These items are deliberately separated so the visual prototype cannot be mistake
 The regional trader gallery adds Bill (Kanto), Kurt (Johto), Steven (Hoenn), Cynthia (Sinnoh), N (Unova), Professor Sycamore (Kalos), Professor Kukui (Alola), Hop (Galar) and Arven (Paldea). Each regional trader unlocks after the player discovers at least one Pokémon in that region's Pokédex. The existing Mystery Trader, General Collector and Kanto Keeper remain available.
 
 Regional traders offer Pokémon from their own region at the same rarity tier as the offered card. Bill and the Kanto Keeper both specialise in Kanto returns. Trader portraits currently reference the Pokémon Showdown trainer-sprite archive; its directory notes that some images are community-created and requires artist credit. These are prototype portrait references, not a verified set of original game-ripped assets. Before public release, review each selected sprite's provenance and credit requirements, and replace any portrait that does not meet the intended game-era art direction. In particular, Hop's final portrait should use a Sword / Shield-era 3D-style game render if a suitable permitted asset is available.
+
+
+## Regional trader gallery scope clarification
+
+The regional character gallery is a presentation layer only: name, sprite, region/game-era label and short lore description. All NPCs use the same existing trade review and confirmation flow and the same rarity-matching rules. Bill replaces the former Kanto Keeper entry. The regional characters do not have bespoke trade scenes or individual trade mechanics in this prototype.
