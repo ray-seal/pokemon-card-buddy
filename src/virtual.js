@@ -460,7 +460,7 @@ function tradeCardFromBrief(brief, rarityIndex) {
 }
 async function ensureTradeCatalogue() {
   if (tradeCatalogue) return tradeCatalogue;
-  tradeCatalogue = loadCardCatalogue().then(cards => cards.filter(card => card?.id && card?.name && card?.image && matchPokemon(card.name)));
+  tradeCatalogue = loadCardCatalogue().then(cards => { const eligible = cards.filter(card => card?.id && card?.name && card?.image && matchPokemon(card.name)); if (!eligible.length) throw new Error('No eligible Pokémon cards were returned by the catalogue'); return eligible; }).catch(error => { tradeCatalogue = null; throw error; });
   return tradeCatalogue;
 }
 function renderTradeOptions() {
@@ -534,10 +534,10 @@ async function makeNpcTrade() {
     const lastCopy = state.inventory.filter(card => card.cardId === offered.cardId).length <= 1;
     pendingNpcTrade = { offeredId: offered.id, returnCard, npc, tier };
     $('virtualTradeReviewText').textContent = 'You will give ' + offered.name + ' (' + RARITIES[tier] + ') and receive ' + returnCard.name + ' (' + RARITIES[tier] + ') from ' + TRADE_NPCS[npc].name + '.' + (lastCopy ? ' This is your last copy.' : '');
-    $('virtualTradeReview').showModal();
+    $('virtualTradeReview').hidden = false;
   } catch (error) {
     console.error('NPC trade preparation failed:', error);
-    $('virtualTradeRule').textContent = 'The trade could not be prepared. No cards have been exchanged. Please try again.';
+    $('virtualTradeRule').textContent = 'Trade unavailable: ' + (error?.message || 'the card catalogue could not be loaded') + '. No cards have been exchanged. Please try again.';
   } finally {
     button.textContent = 'Review and trade';
     renderTradeOptions();
@@ -550,7 +550,7 @@ function completeNpcTrade() {
   if (currentIndex < 0) {
     $('virtualTradeRule').textContent = 'That card is no longer in your inventory. No trade was made.';
     pendingNpcTrade = null;
-    $('virtualTradeReview').close();
+    $('virtualTradeReview').hidden = true;
     renderTradeOptions();
     return;
   }
@@ -585,13 +585,13 @@ document.querySelectorAll('[data-virtual-view]').forEach((button) => {
   button.addEventListener('click', () => setVirtualView(button.dataset.virtualView));
 });
 $('virtualCheckin').addEventListener('click', () => setVirtualView('rewards'));
-$('virtualTradeNpc').addEventListener('change', renderTradeOptions);
-$('virtualTradeOffer').addEventListener('change', renderTradeOptions);
+$('virtualTradeNpc').addEventListener('change', () => { pendingNpcTrade = null; $('virtualTradeReview').hidden = true; renderTradeOptions(); });
+$('virtualTradeOffer').addEventListener('change', () => { pendingNpcTrade = null; $('virtualTradeReview').hidden = true; renderTradeOptions(); });
 $('virtualTradeTarget').addEventListener('change', renderTradeOptions);
 $('virtualTradeButton').addEventListener('click', makeNpcTrade);
 $('virtualTradeConfirm').addEventListener('click', completeNpcTrade);
 $('virtualTradeCancel').addEventListener('click', () => { pendingNpcTrade = null; $('virtualTradeReview').close(); });
-$('virtualTradeReview').addEventListener('cancel', () => { pendingNpcTrade = null; });
+
 $('virtualCloseRip').addEventListener('click', () => {
   if (currentPack && !ripStarted) state.coins += currentPack.price;
   currentPack = null; pendingCards = []; ripStarted = false;
