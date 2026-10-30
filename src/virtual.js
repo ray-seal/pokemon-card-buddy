@@ -167,8 +167,9 @@ function renderCurrentReveal() {
   panel.className = 'virtual-pull-card full-card rarity-' + card.rarityIndex;
   panel.style.animation = 'reveal-in .42s ease-out both';
   const image = document.createElement('img');
-  image.src = card.image;
   image.alt = card.name + ' Pokémon trading card';
+  if (card.image) image.src = card.image;
+  else { image.hidden = true; panel.classList.add('image-unavailable'); }
   let triedPng = false;
   image.onerror = () => {
     if (!triedPng && card.image.endsWith('/high.webp')) {
