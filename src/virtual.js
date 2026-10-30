@@ -136,6 +136,27 @@ async function generateCards(pack) {
     };
   });
 }
+async function repairLegacyInventory() {
+  const missing = state.inventory.filter((card) => !card.image || !card.cardId);
+  if (!missing.length) return;
+  try {
+    const catalogue = await loadCardCatalogue();
+    let changed = false;
+    for (const card of missing) {
+      const match = catalogue.find((brief) => normaliseName(brief.name) === normaliseName(card.name))
+        || catalogue.find((brief) => card.pokemonId && matchPokemon(brief.name)?.id === card.pokemonId);
+      if (!match) continue;
+      card.cardId = match.id;
+      card.image = imageForCard(match);
+      card.cardNumber = match.localId || card.cardNumber || '';
+      changed = true;
+    }
+    if (changed) {
+      localStorage.setItem(STORE, JSON.stringify(state));
+      window.dispatchEvent(new CustomEvent('cardbuddy-virtual-inventory-updated'));
+    }
+  } catch { /* Keep the local collection intact if the catalogue is temporarily offline. */ }
+}
 function startPack(packId) {
   currentPack = PACKS.find((pack) => pack.id === packId);
   if (!currentPack || state.coins < currentPack.price) return;
@@ -346,3 +367,4 @@ renderWallet();
 renderCheckin();
 renderPacks();
 renderChallenges();
+void repairLegacyInventory();
