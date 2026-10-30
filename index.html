@@ -133,6 +133,7 @@
         <button data-virtual-view="binder" type="button">Binders</button>
         <button data-virtual-view="pokedex" type="button">Pokédex</button>
         <button data-virtual-view="rewards" type="button">Rewards</button>
+        <button data-virtual-view="trades" type="button">Trade Hub</button>
       </div>
       <section id="virtualPacksView" class="virtual-view">
         <div class="virtual-daily"><div><strong>Daily check-in</strong><p id="virtualCheckinStatus">Collect your daily 25 coins.</p></div><button id="virtualCheckin" type="button">View rewards</button></div>
@@ -182,6 +183,28 @@
           <div id="virtualPokedexDetailContent"></div>
           <div class="binder-choice-footer"><button id="virtualPokedexDetailClose" type="button">Close</button></div>
         </dialog>
+      </section>
+      <section id="virtualTradesView" class="virtual-view" hidden>
+        <div class="virtual-pack-intro"><h3>NPC Trade Hub</h3><p>Swap one of your virtual cards for another card of the same rarity tier. These trades are local to this device.</p></div>
+        <div class="virtual-trade-panel">
+          <label>Choose your trader
+            <select id="virtualTradeNpc">
+              <option value="mystery">Mystery Trader</option>
+              <option value="general">General Collector</option>
+              <option value="kanto">Kanto Keeper</option>
+            </select>
+          </label>
+          <label>Card you are offering
+            <select id="virtualTradeOffer"><option value="">Choose a card you own…</option></select>
+          </label>
+          <label>Card you want in return
+            <select id="virtualTradeTarget" disabled><option value="">Choose a return card…</option></select>
+          </label>
+          <p id="virtualTradeRule" class="note" role="status">Mystery Trader chooses a random card of matching rarity.</p>
+          <button id="virtualTradeButton" class="primary-button" type="button" disabled>Review and trade</button>
+        </div>
+        <div class="virtual-pack-intro"><h3>Trade history</h3><p>Recent swaps from this device.</p></div>
+        <div id="virtualTradeHistory" class="virtual-trade-history"></div>
       </section>
       <section id="virtualRewardsView" class="virtual-view" hidden>
         <div class="virtual-pack-intro"><h3>Daily challenges</h3><p>Complete challenges to earn coins, then claim each reward here. Nothing is added to your wallet until you tap Claim.</p></div>
