@@ -32,11 +32,18 @@ function ensureBinder() {
   localStorage.setItem(BINDERS_KEY, JSON.stringify(binders));
 }
 function cardById(id) { return inventory().find((card) => card.id === id) || null; }
+function attachCardImage(img, card) {
+  const raw=String(card?.image||'').replace(/\/(?:high|low)\.(?:webp|png|jpg|svg)$/i,'').replace(/\/$/,'');
+  if(!raw){img.hidden=true;return;}
+  const formats=['high.png','high.webp','high.jpg','low.png','low.webp','low.jpg'];let index=0;
+  img.onerror=()=>{index++;if(index<formats.length){img.src=raw+'/'+formats[index];return;}img.onerror=null;img.removeAttribute('src');img.alt='Trading card scan unavailable';img.classList.add('image-unavailable');};
+  img.src=raw+'/'+formats[index];
+}
 function showCard(card) {
   if (!card) return;
   const root = $('virtualCardDetailContent');
   root.replaceChildren();
-  const img = document.createElement('img'); img.src = card.image; img.alt = card.name + ' trading card';
+  const img = document.createElement('img'); img.alt = card.name + ' trading card'; attachCardImage(img,card);
   const title = document.createElement('h3'); title.textContent = card.name;
   const rarity = document.createElement('p'); rarity.textContent = card.rarity + (card.setName ? ' · ' + card.setName : '');
   root.append(img,title,rarity);
@@ -66,8 +73,7 @@ function makeSlot(cardId,index) {
   button.className = 'binder-slot' + (card ? ' virtual-filled-slot rarity-border-'+card.rarityIndex : '');
   button.dataset.slot = String(index);
   if (card) {
-    const img = document.createElement('img'); img.src = card.image; img.alt = card.name; img.loading = 'lazy';
-    img.onerror = () => { img.onerror = null; img.src = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+(card.dexNumber || 25)+'.png'; };
+    const img = document.createElement('img'); img.alt = card.name; img.loading = 'lazy'; attachCardImage(img,card);
     const caption = document.createElement('span'); caption.className = 'slot-caption'; caption.textContent = card.name;
     button.append(img,caption);
     const remove = document.createElement('span'); remove.className = 'slot-remove'; remove.textContent = '×'; remove.setAttribute('aria-label','Remove from binder');
@@ -117,7 +123,7 @@ function openPicker(index) {
   } else {
     root.replaceChildren(...cards.map((card)=>{
       const button=document.createElement('button');button.type='button';button.className='virtual-picker-card';
-      const image=document.createElement('img');image.src=card.image;image.alt='';
+      const image=document.createElement('img');image.alt=card.name+' trading card';attachCardImage(image,card);
       const title=document.createElement('strong');title.textContent=card.name;
       const rarity=document.createElement('small');rarity.textContent=card.rarity;
       button.append(image,title,rarity);
@@ -137,28 +143,53 @@ async function turnPage(delta) {
   await new Promise(resolve=>setTimeout(resolve,360));
   pageIndex=next;renderBinder();book.classList.remove('turn-forward','turn-back');
 }
-function renderPokedex() {
-  const unlocked=new Set(inventoryState().unlockedPokemon || []);
-  const region=$('virtualPokedexRegion').value || REGIONS[0];
-  const query=$('virtualPokedexSearch').value.trim().toLowerCase();
-  const entries=POKEMON.filter((pokemon)=>pokemon.region===region);
-  const found=entries.filter((pokemon)=>unlocked.has(pokemon.id));
-  $('virtualPokedexProgress').textContent=found.length+' / '+entries.length+' discovered in '+region+' · '+unlocked.size+' unique discoveries overall';
-  $('virtualPokedexGrid').replaceChildren(...entries.filter((pokemon)=>{
-    if(!query)return true;
-    return unlocked.has(pokemon.id) && pokemon.name.toLowerCase().includes(query);
-  }).map((pokemon)=>{
-    const discovered=unlocked.has(pokemon.id);
-    const card=document.createElement('article');card.className='virtual-pokedex-entry'+(discovered?' discovered':'');
-    const number=document.createElement('small');number.textContent='#'+String(pokemon.dexNumber).padStart(4,'0');
-    const name=document.createElement('strong');name.textContent=discovered?pokemon.name:'???';
-    const image=document.createElement('img');image.alt=discovered?pokemon.name:'Undiscovered Pokémon';image.loading='lazy';
-    if(discovered) image.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+pokemon.dexNumber+'.png';
-    else image.src='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="34" fill="%23212c43" stroke="%23516689" stroke-width="4"/%3E%3Cpath d="M16 50h68" stroke="%23516689" stroke-width="4"/%3E%3Ccircle cx="50" cy="50" r="10" fill="%230d1422" stroke="%23516689" stroke-width="4"/%3E%3C/svg%3E';
-    const status=document.createElement('span');status.textContent=discovered?'Discovered':'Undiscovered';
-    card.append(number,image,name,status);
-    return card;
-  }));
+const dexDetailCache=new Map();let activeDexDetailId=null;
+function collectedCardsFor(pokemon){return inventory().filter(card=>card.pokemonId===pokemon.id||card.dexNumber===pokemon.dexNumber);}
+async function openPokedexEntry(pokemon,discovered){
+ const root=$('virtualPokedexDetailContent');root.replaceChildren();activeDexDetailId=pokemon.id;
+ const heading=document.createElement('div');heading.className='dex-detail-heading';
+ const number=document.createElement('small');number.textContent='#'+String(pokemon.dexNumber).padStart(4,'0');
+ const name=document.createElement('h2');name.textContent=discovered?pokemon.name:'???';heading.append(number,name);root.append(heading);
+ if(!discovered){const locked=document.createElement('p');locked.className='dex-locked-note';locked.textContent='This Pokémon has not been discovered yet. Pull one of its cards to reveal its Pokédex entry.';root.append(locked);$('virtualPokedexDetail').showModal();return;}
+ const sprite=document.createElement('img');sprite.className='dex-detail-sprite';sprite.alt=pokemon.name;
+ sprite.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/'+pokemon.dexNumber+'.png';
+ sprite.onerror=()=>{sprite.onerror=null;sprite.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+pokemon.dexNumber+'.png';};root.append(sprite);
+ const loading=document.createElement('p');loading.className='dex-loading';loading.textContent='Loading Pokédex data…';root.append(loading);
+ const owned=collectedCardsFor(pokemon);const ownedHeading=document.createElement('h3');ownedHeading.textContent=owned.length?'Your collected card'+(owned.length===1?'':'s'):'No card collected yet';root.append(ownedHeading);
+ if(owned.length){const cardGrid=document.createElement('div');cardGrid.className='dex-owned-cards';owned.forEach(card=>{
+  const button=document.createElement('button');button.type='button';button.className='dex-owned-card';
+  const image=document.createElement('img');image.alt=card.name+' trading card';attachCardImage(image,card);
+  const label=document.createElement('span');label.textContent=(card.setName||'Card')+' · '+card.rarity;button.append(image,label);
+  button.addEventListener('click',()=>{$('virtualPokedexDetail').close();showCard(card);});cardGrid.append(button);
+ });root.append(cardGrid);}
+ $('virtualPokedexDetail').showModal();let detail=dexDetailCache.get(pokemon.dexNumber);
+ if(!detail){try{
+  const [pr,sr]=await Promise.all([fetch('https://pokeapi.co/api/v2/pokemon/'+pokemon.dexNumber),fetch('https://pokeapi.co/api/v2/pokemon-species/'+pokemon.dexNumber)]);
+  if(!pr.ok)throw new Error('Pokémon details unavailable');const creature=await pr.json();const species=sr.ok?await sr.json():null;
+  detail={types:(creature.types||[]).sort((a,b)=>a.slot-b.slot).map(x=>x.type.name),height:creature.height/10,weight:creature.weight/10,abilities:(creature.abilities||[]).map(x=>x.ability.name.replace(/-/g,' ')),genus:species?.genera?.find(x=>x.language?.name==='en')?.genus||'',flavour:species?.flavor_text_entries?.find(x=>x.language?.name==='en')?.flavor_text?.replace(/[\f\n]/g,' ').replace(/\s+/g,' ').trim()||''};dexDetailCache.set(pokemon.dexNumber,detail);
+ }catch{detail={error:true};}}
+ if(activeDexDetailId!==pokemon.id||!$('virtualPokedexDetail').open)return;loading.remove();
+ if(detail.error){const note=document.createElement('p');note.textContent='Extra Pokédex details could not be loaded right now, but your collected cards are shown above.';root.append(note);return;}
+ const facts=document.createElement('div');facts.className='dex-facts';
+ const types=document.createElement('p');types.innerHTML='<strong>Type</strong> '+detail.types.map(x=>x[0].toUpperCase()+x.slice(1)).join(' / ');
+ const size=document.createElement('p');size.innerHTML='<strong>Height</strong> '+detail.height+' m · <strong>Weight</strong> '+detail.weight+' kg';
+ const abilities=document.createElement('p');abilities.innerHTML='<strong>Abilities</strong> '+detail.abilities.join(', ');facts.append(types,size,abilities);root.append(facts);
+ if(detail.genus){const genus=document.createElement('p');genus.className='dex-genus';genus.textContent=detail.genus;root.insertBefore(genus,sprite);}
+ if(detail.flavour){const flavour=document.createElement('blockquote');flavour.className='dex-flavour';flavour.textContent=detail.flavour;root.append(flavour);}
+}
+function renderPokedex(){
+ const unlocked=new Set(inventoryState().unlockedPokemon||[]),region=$('virtualPokedexRegion').value||REGIONS[0],query=$('virtualPokedexSearch').value.trim().toLowerCase();
+ const entries=POKEMON.filter(p=>p.region===region),found=entries.filter(p=>unlocked.has(p.id));
+ $('virtualPokedexProgress').textContent=found.length+' / '+entries.length+' discovered in '+region+' · '+unlocked.size+' unique discoveries overall';
+ $('virtualPokedexGrid').replaceChildren(...entries.filter(p=>!query||(unlocked.has(p.id)&&p.name.toLowerCase().includes(query))).map(p=>{
+  const discovered=unlocked.has(p.id),card=document.createElement('button');card.type='button';card.className='virtual-pokedex-entry'+(discovered?' discovered':'');
+  const number=document.createElement('small');number.textContent='#'+String(p.dexNumber).padStart(4,'0');
+  const name=document.createElement('strong');name.textContent=discovered?p.name:'???';
+  const image=document.createElement('img');image.alt=discovered?p.name:'Undiscovered Pokémon';image.loading='lazy';
+  if(discovered)image.src='https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/'+p.dexNumber+'.png';
+  else image.src='data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Ccircle cx="50" cy="50" r="34" fill="%23212c43" stroke="%23516689" stroke-width="4"/%3E%3Cpath d="M16 50h68" stroke="%23516689" stroke-width="4"/%3E%3Ccircle cx="50" cy="50" r="10" fill="%230d1422" stroke="%23516689" stroke-width="4"/%3E%3C/svg%3E';
+  const status=document.createElement('span');status.textContent=discovered?'Discovered':'Undiscovered';card.append(number,image,name,status);card.addEventListener('click',()=>openPokedexEntry(p,discovered));return card;
+ }));
 }
 function switchView(view) {
   if(view==='binder')renderBinder();
@@ -198,6 +229,7 @@ $('virtualPrevPage').addEventListener('click',()=>turnPage(-1));
 $('virtualNextPage').addEventListener('click',()=>turnPage(1));
 $('virtualBinderPickerClose').addEventListener('click',()=>$('virtualBinderPicker').close());
 $('virtualCardDetailClose').addEventListener('click',()=>$('virtualCardDetail').close());
+$('virtualPokedexDetailClose').addEventListener('click',()=>$('virtualPokedexDetail').close());
 $('virtualPokedexRegion').replaceChildren(...REGIONS.map((region)=>new Option(region,region)));
 $('virtualPokedexRegion').addEventListener('change',renderPokedex);
 $('virtualPokedexSearch').addEventListener('input',renderPokedex);
