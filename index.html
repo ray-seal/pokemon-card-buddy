@@ -203,14 +203,14 @@
           <p id="virtualTradeRule" class="note" role="status">Mystery Trader chooses a random card of matching rarity.</p>
           <button id="virtualTradeButton" class="primary-button" type="button" disabled>Review and trade</button>
         </div>
-      <dialog id="virtualTradeReview" class="binder-choice-dialog virtual-trade-review">
+      <section id="virtualTradeReview" class="virtual-trade-review" hidden aria-live="polite">
         <h3>Review your trade</h3>
         <p id="virtualTradeReviewText"></p>
-        <div class="binder-choice-footer">
+        <div class="virtual-trade-review-actions">
           <button id="virtualTradeCancel" type="button" class="secondary">Cancel</button>
           <button id="virtualTradeConfirm" type="button" class="primary-button">Confirm trade</button>
         </div>
-      </dialog>
+      </section>
         <div class="virtual-pack-intro"><h3>Trade history</h3><p>Recent swaps from this device.</p></div>
         <div id="virtualTradeHistory" class="virtual-trade-history"></div>
       </section>
