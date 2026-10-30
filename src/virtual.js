@@ -71,6 +71,8 @@ function startPack(packId) {
   state.coins -= currentPack.price;
   save();
   selectedChoice = -1;
+  ripStarted = false;
+  $('virtualCloseRip').hidden = false;
   $('virtualRipOverlay').hidden = false;
   $('virtualChoiceGrid').hidden = false;
   $('virtualSelectedPack').hidden = true;
@@ -94,7 +96,9 @@ function choosePack(index) {
   $('virtualPackArtwork').className = 'virtual-pack-art ' + currentPack.theme;
 }
 function finishRip() {
-  if (!currentPack || $('virtualReveal').hidden === false) return;
+  if (!currentPack || ripStarted || $('virtualReveal').hidden === false) return;
+  ripStarted = true;
+  $('virtualCloseRip').hidden = true;
   pendingCards = generateCards(currentPack);
   $('virtualSelectedPack').classList.add('is-ripping');
   $('virtualRipInstruction').textContent = 'The seal is breaking…';
@@ -133,11 +137,12 @@ function completePack() {
   resetDaily();
   state.daily.packsOpened += 1;
   state.history.unshift({ date: new Date().toISOString(), pack: currentPack.id, cards: pendingCards.map((card) => card.id) });
-  resetDaily();
   if (!state.daily.firstPack) { state.daily.firstPack = true; state.coins += 25; }
   if (state.daily.packsOpened >= 5 && !state.daily.fivePacks) { state.daily.fivePacks = true; state.coins += 75; }
   pendingCards = [];
   currentPack = null;
+  ripStarted = false;
+  $('virtualCloseRip').hidden = false;
   $('virtualRipOverlay').hidden = true;
   $('virtualReveal').classList.remove('has-grail', 'has-legendary');
   save();
@@ -211,7 +216,8 @@ function setVirtualView(view) {
 $('virtualCheckin').addEventListener('click', () => { claimCheckin(); renderCheckin(); renderChallenges(); });
 $('virtualCloseRip').addEventListener('click', () => {
   if (currentPack && !pendingCards.length) state.coins += currentPack.price;
-  currentPack = null; pendingCards = [];
+  currentPack = null; pendingCards = []; ripStarted = false;
+  $('virtualCloseRip').hidden = false;
   $('virtualRipOverlay').hidden = true; save(); renderPacks();
 });
 $('virtualDone').addEventListener('click', completePack);
