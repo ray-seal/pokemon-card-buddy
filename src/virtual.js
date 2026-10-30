@@ -33,7 +33,8 @@ function save() {
   renderChallenges();
 }
 function resetDaily() {
-  if (state.daily?.date !== today()) state.daily = { date: today(), checkin: false, firstPack: false, fivePacks: false, packsOpened: 0 };\n  if (typeof state.daily.packsOpened !== 'number') state.daily.packsOpened = 0;
+  if (state.daily?.date !== today()) state.daily = { date: today(), checkin: false, firstPack: false, fivePacks: false, packsOpened: 0 };
+  if (typeof state.daily.packsOpened !== 'number') state.daily.packsOpened = 0;
 }
 function renderWallet() { $('virtualCoins').textContent = state.coins.toLocaleString('en-GB'); }
 function packMarkup(pack, small = false) {
@@ -129,6 +130,8 @@ function completePack() {
   if (!pendingCards.length) return;
   state.inventory.push(...pendingCards);
   state.packsOpened += 1;
+  resetDaily();
+  state.daily.packsOpened += 1;
   state.history.unshift({ date: new Date().toISOString(), pack: currentPack.id, cards: pendingCards.map((card) => card.id) });
   resetDaily();
   if (!state.daily.firstPack) { state.daily.firstPack = true; state.coins += 25; }
