@@ -38,7 +38,7 @@ function resetDaily() {
 }
 function renderWallet() { $('virtualCoins').textContent = state.coins.toLocaleString('en-GB'); }
 function packMarkup(pack, small = false) {
-  return '<div class="virtual-pack-face ' + pack.theme + (small ? ' compact' : '') + '"><img src="assets/packs/cardbuddy-' + pack.id + '.svg" alt="' + pack.name + ' CardBuddy booster pack" loading="lazy"><span class="pack-crown">♛</span><strong>CARDBUDDY</strong><small>' + pack.name.toUpperCase() + ' PACK</small></div>';
+  return '<div class="virtual-pack-face ' + pack.theme + (small ? ' compact' : '') + '"><img src="assets/packs/cardbuddy-' + pack.id + '.svg" alt="' + pack.name + ' CardBuddy booster pack" loading="lazy"></div>';
 }
 function renderPacks() {
   $('virtualPackGrid').replaceChildren(...PACKS.map((pack) => {
