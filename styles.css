@@ -546,3 +546,10 @@ main { max-width:54rem; margin:0 auto; padding:0 1rem 2rem; }
   .virtual-subnav { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.35rem; }
   .virtual-subnav button { padding:.62rem .3rem; font-size:.82rem; white-space:normal; }
 }
+
+.virtual-trade-review { margin:.85rem 0; padding:1rem; border:1px solid #6d5bb2; border-radius:1rem; background:linear-gradient(145deg,#202747,#111a2c); box-shadow:0 8px 24px #0004; }
+.virtual-trade-review h3 { margin:0 0 .45rem; }
+.virtual-trade-review p { margin:.25rem 0 .85rem; color:var(--muted); line-height:1.5; }
+.virtual-trade-review-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.55rem; }
+.virtual-trade-review-actions button { min-height:2.8rem; }
+.virtual-trade-panel button:disabled { opacity:.55; cursor:not-allowed; }
