@@ -8,6 +8,18 @@ const PACKS = [
   { id: 'legendary', name: 'Legendary', price: 550, cards: 6, theme: 'gold', odds: [15,20,25,20,15,5] },
 ];
 const RARITIES = ['Common','Uncommon','Rare','Epic','Legendary','Grail'];
+const REGIONAL_PRICES = { starter: 125, premium: 250, elite: 425, legendary: 675 };
+const REGION_VARIANTS = {
+  Kanto: [{name:'Red',hue:150},{name:'Green',hue:270},{name:'Blue',hue:0},{name:'Yellow',hue:210}],
+  Johto: [{name:'Gold',hue:38},{name:'Silver',hue:0},{name:'Crystal',hue:190},{name:'SoulSilver',hue:215}],
+  Hoenn: [{name:'Ruby',hue:345},{name:'Sapphire',hue:210},{name:'Emerald',hue:125},{name:'Omega',hue:285}],
+  Sinnoh: [{name:'Diamond',hue:205},{name:'Pearl',hue:330},{name:'Platinum',hue:0},{name:'Legends',hue:45}],
+  Unova: [{name:'Black',hue:0},{name:'White',hue:0},{name:'Black 2',hue:215},{name:'White 2',hue:180}],
+  Kalos: [{name:'X',hue:0},{name:'Y',hue:345},{name:'Central',hue:195},{name:'Coastal',hue:125}],
+  Alola: [{name:'Sun',hue:38},{name:'Moon',hue:245},{name:'Ultra Sun',hue:18},{name:'Ultra Moon',hue:275}],
+  Galar: [{name:'Sword',hue:0},{name:'Shield',hue:210},{name:'Crown',hue:190},{name:'Isle',hue:125}],
+  Paldea: [{name:'Scarlet',hue:345},{name:'Violet',hue:255},{name:'Teal',hue:150},{name:'Indigo',hue:225}],
+};
 const $ = (id) => document.getElementById(id);
 const safeParse = (value) => { try { return JSON.parse(value); } catch { return null; } };
 const today = () => new Date().toISOString().slice(0, 10);
@@ -16,6 +28,14 @@ const freshState = () => ({ coins: 100, inventory: [], packsOpened: 0, unlockedP
 let state = safeParse(localStorage.getItem(STORE)) || freshState();
 if (!Array.isArray(state.inventory)) state.inventory = [];
 if (!Array.isArray(state.unlockedPokemon)) state.unlockedPokemon = [];
+if (!Array.isArray(state.tradeHistory)) state.tradeHistory = [];
+for (const card of state.inventory) {
+  if (!card.id) card.id = uid();
+  if (typeof card.id !== 'string') card.id = String(card.id);
+  if (!card.name) card.name = card.pokemonName || 'Unknown Pokémon';
+}
+
+let tradeCatalogue = null;
 let currentPack = null;
 let pendingCards = [];
 let revealIndex = 0;
@@ -37,17 +57,36 @@ function resetDaily() {
   if (typeof state.daily.fivePacksEarned !== 'boolean') state.daily.fivePacksEarned = Boolean(state.daily.fivePacks);
 }
 function renderWallet() { $('virtualCoins').textContent = state.coins.toLocaleString('en-GB'); }
-function packMarkup(pack, small = false) {
-  return '<div class="virtual-pack-face ' + pack.theme + (small ? ' compact' : '') + '"><img src="assets/packs/cardbuddy-' + pack.id + '.svg" alt="' + pack.name + ' CardBuddy booster pack" loading="lazy"></div>';
+function packMarkup(pack, small = false, variant = null) {
+  const assetId = pack.baseId || pack.id;
+  const hue = variant?.hue ?? 0;
+  const tint = hue ? ' style="filter:hue-rotate(' + hue + 'deg) saturate(1.18)"' : '';
+  return '<div class="virtual-pack-face ' + pack.theme + (small ? ' compact' : '') + (pack.regional ? ' regional-foil' : '') + '"><img' + tint + ' src="assets/packs/cardbuddy-' + assetId + '.svg" alt="' + pack.name + (variant ? ' ' + variant.name : '') + ' CardBuddy booster pack" loading="lazy"></div>';
 }
-function renderPacks() {
-  $('virtualPackGrid').replaceChildren(...PACKS.map((pack) => {
+function renderPackCards(root, packs, regional = false) {
+  root.replaceChildren(...packs.map((pack) => {
     const card = document.createElement('article');
-    card.className = 'virtual-pack-card';
-    card.innerHTML = packMarkup(pack) + '<div class="virtual-pack-meta"><h4>' + pack.name + ' Pack</h4><p>' + pack.cards + ' virtual cards · improved high-rarity odds</p><div class="virtual-pack-buy"><strong>🪙 ' + pack.price + '</strong><button type="button" ' + (state.coins < pack.price ? 'disabled' : '') + '>Choose pack</button></div></div>';
-    card.querySelector('button').addEventListener('click', () => startPack(pack.id));
+    card.className = 'virtual-pack-card' + (regional ? ' regional-pack-card' : '');
+    const sub = regional ? pack.region + ' Pokémon only · any card set or artwork' : pack.cards + ' virtual cards · improved high-rarity odds';
+    card.innerHTML = packMarkup(pack) + '<div class="virtual-pack-meta"><h4>' + pack.name + ' Pack</h4><p>' + sub + '</p><div class="virtual-pack-buy"><strong>🪙 ' + pack.price + '</strong><button type="button" ' + (state.coins < pack.price ? 'disabled' : '') + '>Choose pack</button></div></div>';
+    card.querySelector('button').addEventListener('click', () => startPack(pack));
     return card;
   }));
+}
+function regionalPacks(region) {
+  return PACKS.map((base) => ({
+    ...base, id: 'regional-' + region.toLowerCase() + '-' + base.id, baseId: base.id,
+    name: region + ' ' + base.name, price: REGIONAL_PRICES[base.id], region, regional: true,
+    variants: REGION_VARIANTS[region] || [{name:'Classic',hue:0},{name:'Light',hue:35},{name:'Deep',hue:210},{name:'Bright',hue:125}],
+  }));
+}
+function renderPacks() {
+  renderPackCards($('virtualPackGrid'), PACKS);
+  renderRegionalPacks();
+}
+function renderRegionalPacks() {
+  const region = $('virtualRegionalPackRegion').value || REGIONS[0];
+  renderPackCards($('virtualRegionalPackGrid'), regionalPacks(region), true);
 }
 function rollRarity(pack) {
   const roll = Math.random() * 100;
@@ -74,17 +113,85 @@ function matchPokemon(cardName) {
 async function loadCardCatalogue() {
   if (cardCataloguePromise) return cardCataloguePromise;
   cardCataloguePromise = (async () => {
-    const cached = safeParse(sessionStorage.getItem('cardbuddy.tcgdex.catalogue.v1'));
-    if (Array.isArray(cached) && cached.length) return cached;
-    const response = await fetch('https://api.tcgdex.net/v2/en/cards?category=Pokemon');
-    if (!response.ok) throw new Error('TCGDex card catalogue is unavailable');
-    const cards = await response.json();
-    const pokemonCards = cards.filter((card) => card.image && card.name && card.id);
-    if (!pokemonCards.length) throw new Error('No Pokémon cards were returned by TCGDex');
-    try { sessionStorage.setItem('cardbuddy.tcgdex.catalogue.v1', JSON.stringify(pokemonCards)); } catch {}
-    return pokemonCards;
+    const cacheKey = 'cardbuddy.tcgdex.catalogue.v4';
+    const sessionCache = safeParse(sessionStorage.getItem(cacheKey));
+    const savedCache = safeParse(localStorage.getItem(cacheKey));
+    const legacyCache = safeParse(sessionStorage.getItem('cardbuddy.tcgdex.catalogue.v3')) || safeParse(localStorage.getItem('cardbuddy.tcgdex.catalogue.v3'));
+    if (Array.isArray(sessionCache) && sessionCache.length) return sessionCache;
+    if (Array.isArray(legacyCache) && legacyCache.length) {
+      try { sessionStorage.setItem(cacheKey, JSON.stringify(legacyCache)); } catch {}
+      try { localStorage.setItem(cacheKey, JSON.stringify(legacyCache)); } catch {}
+      return legacyCache;
+    }
+    if (Array.isArray(savedCache) && savedCache.length) {
+      try { sessionStorage.setItem(cacheKey, JSON.stringify(savedCache)); } catch {}
+      return savedCache;
+    }
+    let cards = null;
+    try {
+      const response = await fetch('https://api.tcgdex.net/v2/en/cards');
+      if (response.ok) {
+        const payload = await response.json();
+        if (Array.isArray(payload)) cards = payload.filter((card) => card.image && card.name && card.id);
+      }
+    } catch { /* Use a previously saved catalogue when the API is offline. */ }
+    if (!cards?.length) throw new Error('TCGdex card catalogue is unavailable');
+    try { sessionStorage.setItem(cacheKey, JSON.stringify(cards)); } catch {}
+    try { localStorage.setItem(cacheKey, JSON.stringify(cards)); } catch {}
+    return cards;
   })().catch((error) => { cardCataloguePromise = null; throw error; });
   return cardCataloguePromise;
+}
+const regionalCataloguePromises = new Map();
+async function loadRegionalCatalogue(region) {
+  if (regionalCataloguePromises.has(region)) return regionalCataloguePromises.get(region);
+  const promise = (async () => {
+    const key = 'cardbuddy.tcgdex.region.v1.' + region.toLowerCase();
+    const cached = safeParse(sessionStorage.getItem(key)) || safeParse(localStorage.getItem(key));
+    if (Array.isArray(cached) && cached.length) {
+      try { sessionStorage.setItem(key, JSON.stringify(cached)); } catch {}
+      return cached;
+    }
+    const dexNumbers = POKEMON.filter((pokemon) => pokemon.region === region).map((pokemon) => pokemon.dexNumber);
+    if (!dexNumbers.length) throw new Error('Unknown Pokédex region');
+    let cards = [];
+    try {
+      const url = 'https://api.tcgdex.net/v2/en/cards?dexId=' + encodeURIComponent('eq:' + dexNumbers.join('|'));
+      const response = await fetch(url);
+      if (response.ok) {
+        const payload = await response.json();
+        cards = Array.isArray(payload) ? payload.filter((card) => card.id && card.name && card.image) : [];
+      }
+    } catch { /* Try the saved all-card catalogue as a local fallback. */ }
+    if (!cards.length) {
+      const allCards = await loadCardCatalogue();
+      const regionIds = new Set(dexNumbers);
+      cards = allCards.filter((brief) => {
+        const species = matchPokemon(brief.name);
+        return species && regionIds.has(species.dexNumber);
+      });
+    }
+    if (!cards.length) throw new Error('No cards are listed for ' + region);
+    try { sessionStorage.setItem(key, JSON.stringify(cards)); } catch {}
+    try { localStorage.setItem(key, JSON.stringify(cards)); } catch {}
+    return cards;
+  })().catch((error) => { regionalCataloguePromises.delete(region); throw error; });
+  regionalCataloguePromises.set(region, promise);
+  return promise;
+}
+async function fetchCardDetail(brief) {
+  const key = 'cardbuddy.tcgdex.card.v1.' + brief.id;
+  try {
+    const response = await fetch('https://api.tcgdex.net/v2/en/cards/' + encodeURIComponent(brief.id));
+    if (response.ok) {
+      const detail = await response.json();
+      const full = { ...brief, ...detail, image: detail.image || brief.image };
+      try { localStorage.setItem(key, JSON.stringify(full)); } catch {}
+      return full;
+    }
+  } catch { /* Reuse a previously retrieved full card when the API is offline. */ }
+  const cached = safeParse(localStorage.getItem(key));
+  return cached && cached.category === 'Pokemon' ? cached : brief;
 }
 function imageForCard(card) {
   const raw = String(card?.image || '').replace(/\/(?:high|low)\.(?:webp|png|jpg|svg)$/i, '').replace(/\/$/, '');
@@ -103,57 +210,94 @@ function attachCardImage(image, card) {
   image.src = raw + '/' + formats[index];
 }
 async function generateCards(pack) {
-  let catalogue = [];
-  try { catalogue = await loadCardCatalogue(); } catch { /* Use species artwork fallback if TCGDex is offline. */ }
-  const selected = Array.from({ length: pack.cards }, () => catalogue.length ? catalogue[Math.floor(Math.random() * catalogue.length)] : null);
-  const detailed = await Promise.all(selected.map(async (brief) => {
-    if (!brief?.id) return brief;
-    try {
-      const response = await fetch('https://api.tcgdex.net/v2/en/cards/' + encodeURIComponent(brief.id));
-      if (!response.ok) return brief;
-      const detail = await response.json();
-      return { ...brief, ...detail, image: detail.image || brief.image };
-    } catch { return brief; }
-  }));
-  return detailed.map((source) => {
-    const species = source ? matchPokemon(source.name) : POKEMON[Math.floor(Math.random() * POKEMON.length)];
+  const catalogue = pack.regional ? await loadRegionalCatalogue(pack.region) : await loadCardCatalogue();
+  const pokemonBriefs = catalogue.filter((brief) => matchPokemon(brief.name) && brief.image && brief.id);
+  if (!pokemonBriefs.length) throw new Error('No Pokémon cards are currently listed for this pack');
+  const pulls = [];
+  const used = new Set();
+  for (let slot = 0; slot < pack.cards; slot++) {
+    let accepted = null;
+    for (let attempt = 0; attempt < 35 && !accepted; attempt++) {
+      const candidates = pokemonBriefs.filter((brief) => !used.has(brief.id));
+      const pool = candidates.length ? candidates : pokemonBriefs;
+      const brief = pool[Math.floor(Math.random() * pool.length)];
+      try {
+        const source = await fetchCardDetail(brief);
+        const dexIds = Array.isArray(source.dexId) ? source.dexId.map(Number) : (source.dexId == null ? [] : [Number(source.dexId)]);
+        const species = POKEMON.find((pokemon) => dexIds.includes(pokemon.dexNumber)) || matchPokemon(source.name);
+        if (source.category !== 'Pokemon' || !species) continue;
+        if (pack.regional && species.region !== pack.region) continue;
+        accepted = { source, species };
+        used.add(brief.id);
+      } catch { /* Try another Pokémon card. */ }
+    }
+    if (!accepted) throw new Error('Could not find enough eligible Pokémon cards');
+    const { source, species } = accepted;
     const rarityIndex = rollRarity(pack);
-    return {
-      id: uid(), pokemonId: species?.id || null, dexNumber: species?.dexNumber || null, pokemonName: species?.name || '',
-      name: source?.name || species?.name || 'Mystery Pokémon', cardId: source?.id || null, image: imageForCard(source),
+    pulls.push({
+      id: uid(), pokemonId: species.id, dexNumber: species.dexNumber, pokemonName: species.name,
+      name: source.name || species.name, cardId: source.id || null, image: imageForCard(source),
       setName: source?.set?.name || '', cardNumber: source?.localId || '', rarity: RARITIES[rarityIndex],
-      rarityIndex, pack: pack.id, obtainedAt: new Date().toISOString(),
-    };
-  });
+      rarityIndex, pack: pack.id, region: pack.region || species.region, obtainedAt: new Date().toISOString(),
+    });
+  }
+  return pulls;
 }
-function startPack(packId) {
-  currentPack = PACKS.find((pack) => pack.id === packId);
+async function repairLegacyInventory() {
+  const missing = state.inventory.filter((card) => !card.image || !card.cardId);
+  if (!missing.length) return;
+  try {
+    const catalogue = await loadCardCatalogue();
+    let changed = false;
+    for (const card of missing) {
+      const match = catalogue.find((brief) => normaliseName(brief.name) === normaliseName(card.name))
+        || catalogue.find((brief) => card.pokemonId && matchPokemon(brief.name)?.id === card.pokemonId);
+      if (!match) continue;
+      card.cardId = match.id;
+      card.image = imageForCard(match);
+      card.cardNumber = match.localId || card.cardNumber || '';
+      changed = true;
+    }
+    if (changed) {
+      localStorage.setItem(STORE, JSON.stringify(state));
+      window.dispatchEvent(new CustomEvent('cardbuddy-virtual-inventory-updated'));
+    }
+  } catch { /* Keep the local collection intact if the catalogue is temporarily offline. */ }
+}
+function startPack(packOrId) {
+  currentPack = typeof packOrId === 'string' ? PACKS.find((pack) => pack.id === packOrId) : packOrId;
   if (!currentPack || state.coins < currentPack.price) return;
   state.coins -= currentPack.price;
   save();
   ripStarted = false;
+  currentPack.choiceVariants = currentPack.regional
+    ? Array.from({length:8},(_,i)=>currentPack.variants[i % currentPack.variants.length]).sort(()=>Math.random()-.5)
+    : Array.from({length:8},()=>({name:'Classic',hue:0}));
   $('virtualCloseRip').hidden = false;
   $('virtualRipOverlay').hidden = false;
   $('virtualChoiceGrid').hidden = false;
   $('virtualSelectedPack').hidden = true;
   $('virtualReveal').hidden = true;
-  $('virtualRipInstruction').textContent = 'Choose one of your eight packs';
+  $('virtualRipInstruction').textContent = currentPack.regional ? 'Choose your ' + currentPack.region + ' pack design' : 'Choose one of your eight packs';
   $('virtualChoiceGrid').replaceChildren(...Array.from({ length: 8 }, (_, index) => {
     const choice = document.createElement('button');
     choice.type = 'button';
     choice.className = 'virtual-choice';
-    choice.setAttribute('aria-label', 'Choose pack ' + (index + 1));
-    choice.innerHTML = packMarkup(currentPack, true);
+    choice.setAttribute('aria-label', 'Choose ' + currentPack.choiceVariants[index].name + ' pack ' + (index + 1));
+    choice.innerHTML = packMarkup(currentPack, true, currentPack.choiceVariants[index]);
     choice.addEventListener('click', () => choosePack(index));
     return choice;
   }));
 }
-function choosePack() {
+function choosePack(index = 0) {
+  const variant = currentPack.choiceVariants?.[index] || {name:'Classic',hue:0};
+  currentPack.selectedVariant = variant;
   $('virtualChoiceGrid').hidden = true;
   $('virtualSelectedPack').hidden = false;
-  $('virtualRipInstruction').textContent = 'Your ' + currentPack.name + ' pack is ready';
-  $('virtualPackArtwork').className = 'virtual-pack-art ' + currentPack.theme;
-  $('virtualPackArtwork').style.backgroundImage = 'url("assets/packs/cardbuddy-' + currentPack.id + '.svg")';
+  $('virtualRipInstruction').textContent = 'Your ' + currentPack.name + (currentPack.regional ? ' · ' + variant.name : '') + ' pack is ready';
+  $('virtualPackArtwork').className = 'virtual-pack-art ' + currentPack.theme + (currentPack.regional ? ' regional-foil' : '');
+  $('virtualPackArtwork').style.backgroundImage = 'url("assets/packs/cardbuddy-' + (currentPack.baseId || currentPack.id) + '.svg")';
+  $('virtualPackArtwork').style.filter = variant.hue ? 'hue-rotate(' + variant.hue + 'deg) saturate(1.18)' : '';
 }
 async function finishRip() {
   if (!currentPack || ripStarted || $('virtualReveal').hidden === false) return;
@@ -161,7 +305,20 @@ async function finishRip() {
   $('virtualCloseRip').hidden = true;
   $('virtualRipInstruction').textContent = 'The seal is breaking…';
   $('virtualSelectedPack').classList.add('is-ripping');
-  pendingCards = await generateCards(currentPack);
+  try { pendingCards = await generateCards(currentPack); }
+  catch (error) {
+    // Refund exactly once. Clear the paid pack so closing the overlay cannot
+    // refund the same purchase again.
+    const failedPack = currentPack;
+    if (failedPack) state.coins += failedPack.price;
+    currentPack = null;
+    pendingCards = [];
+    save(); ripStarted = false;
+    $('virtualSelectedPack').classList.remove('is-ripping');
+    $('virtualRipInstruction').textContent = 'Card scans are temporarily unavailable. Your coins have been returned once. Please try again shortly.';
+    $('virtualCloseRip').hidden = false;
+    return;
+  }
   window.setTimeout(() => {
     revealIndex = 0;
     $('virtualSelectedPack').hidden = true;
@@ -180,7 +337,20 @@ function renderCurrentReveal() {
   panel.style.animation = 'reveal-in .42s ease-out both';
   const image = document.createElement('img');
   image.alt = card.name + ' Pokémon trading card';
-  attachCardImage(image, card);
+  if (card.image) image.src = card.image;
+  else { image.hidden = true; panel.classList.add('image-unavailable'); }
+  let triedPng = false;
+  image.onerror = () => {
+    if (!triedPng && card.image.endsWith('/high.webp')) {
+      triedPng = true;
+      image.src = card.image.replace('/high.webp', '/high.png');
+      return;
+    }
+    image.onerror = null;
+    image.removeAttribute('src');
+    image.alt = 'Trading card image unavailable';
+    panel.classList.add('image-unavailable');
+  };
   const title = document.createElement('strong');
   title.textContent = card.name;
   const meta = document.createElement('small');
@@ -207,7 +377,7 @@ function completePack() {
   state.packsOpened += 1;
   resetDaily();
   state.daily.packsOpened += 1;
-  state.history.unshift({ date: new Date().toISOString(), pack: currentPack.id, cards: pendingCards.map((card) => card.id) });
+  state.history.unshift({ date: new Date().toISOString(), pack: currentPack.id, region: currentPack.region || null, cards: pendingCards.map((card) => card.id) });
   if (!state.daily.firstPackEarned) state.daily.firstPackEarned = true;
   if (state.daily.packsOpened >= 5 && !state.daily.fivePacksEarned) state.daily.fivePacksEarned = true;
   pendingCards = [];
@@ -268,18 +438,182 @@ function renderChallenges() {
     return item;
   }));
 }
+
+const TRADE_NPCS = {
+  mystery: { name: 'Mystery Trader', description: 'Offer a card and receive a random card from the same rarity tier.' },
+  general: { name: 'General Collector', description: 'Choose any Pokémon card from the catalogue. The rarity tier must match.' },
+  kanto: { name: 'Kanto Keeper', description: 'Accepts cards from any region, but only offers Kanto Pokémon of matching rarity.' },
+};
+function tradeRarity(card) {
+  const index = Number.isInteger(card?.rarityIndex) ? card.rarityIndex : 0;
+  return Math.max(0, Math.min(RARITIES.length - 1, index));
+}
+function tradeSpecies(card) {
+  return POKEMON.find((pokemon) => pokemon.id === card.pokemonId)
+    || POKEMON.find((pokemon) => pokemon.dexNumber === Number(card.dexNumber))
+    || matchPokemon(card.name);
+}
+function tradeCardFromBrief(brief, rarityIndex) {
+  const species = matchPokemon(brief.name);
+  if (!species) return null;
+  return {
+    id: uid(), pokemonId: species.id, dexNumber: species.dexNumber, pokemonName: species.name,
+    name: brief.name || species.name, cardId: brief.id || null, image: imageForCard(brief),
+    setName: brief.set?.name || '', cardNumber: brief.localId || '',
+    rarity: RARITIES[rarityIndex], rarityIndex, pack: 'npc-trade',
+    region: species.region, obtainedAt: new Date().toISOString(),
+  };
+}
+async function ensureTradeCatalogue() {
+  if (tradeCatalogue) return tradeCatalogue;
+  tradeCatalogue = loadCardCatalogue().then(cards => { const eligible = cards.filter(card => card?.id && card?.name && card?.image && matchPokemon(card.name)); if (!eligible.length) throw new Error('No eligible Pokémon cards were returned by the catalogue'); return eligible; }).catch(error => { tradeCatalogue = null; throw error; });
+  return tradeCatalogue;
+}
+function selectedTradeOffer() {
+  const offer = $('virtualTradeOffer');
+  const option = offer.options[offer.selectedIndex];
+  const index = option ? Number(option.dataset.inventoryIndex) : -1;
+  return Number.isInteger(index) && index >= 0 ? state.inventory[index] || null : null;
+}
+function syncTradeSelection() {
+  const npc = $('virtualTradeNpc').value;
+  const offered = selectedTradeOffer();
+  const tier = offered ? tradeRarity(offered) : null;
+  $('virtualTradeTarget').disabled = !offered || npc === 'mystery';
+  $('virtualTradeButton').disabled = !offered || (npc !== 'mystery' && !$('virtualTradeTarget').value);
+  $('virtualTradeRule').textContent = TRADE_NPCS[npc].description + (offered ? ' Offered rarity: ' + RARITIES[tier] + '.' : ' Select a card you own to begin.');
+}
+function renderTradeOptions() {
+  const offer = $('virtualTradeOffer');
+  const target = $('virtualTradeTarget');
+  const npc = $('virtualTradeNpc').value;
+  const selected = selectedTradeOffer();
+  const selectedId = selected ? String(selected.id) : '';
+  const inventory = [...state.inventory].sort((a,b) => String(a.name || '').localeCompare(String(b.name || '')));
+  offer.replaceChildren(new Option('Choose a card you own…',''), ...inventory.map(card => {
+    const option = new Option(String(card.name || card.pokemonName || 'Unknown Pokémon') + ' · ' + RARITIES[tradeRarity(card)] + (state.inventory.filter(item => item.cardId && item.cardId === card.cardId).length === 1 ? ' · last copy' : ''), String(card.id));
+    option.dataset.inventoryIndex = String(state.inventory.indexOf(card));
+    return option;
+  }));
+  const selectedOption = [...offer.options].find(option => option.value === selectedId && selectedId);
+  if (selectedOption) offer.value = selectedOption.value;
+  const offered = selectedTradeOffer();
+  const tier = offered ? tradeRarity(offered) : null;
+  const catalogue = tradeCatalogue || [];
+  const eligible = offered ? catalogue.filter(brief => {
+    const species = matchPokemon(brief.name);
+    return brief.id !== offered.cardId && (npc !== 'kanto' || species?.region === 'Kanto');
+  }) : [];
+  const previous = target.value;
+  target.replaceChildren(new Option(npc === 'mystery' ? 'Random matching card' : 'Choose a return card…', ''));
+  if (npc !== 'mystery' && offered) {
+    eligible.forEach(brief => target.add(new Option(brief.name + ' · ' + (brief.set?.name || brief.id), brief.id)));
+    if (eligible.some(brief => brief.id === previous)) target.value = previous;
+  }
+  $('virtualTradeHistory').replaceChildren(...state.tradeHistory.slice(0,15).map(entry => {
+    const row = document.createElement('article'); row.className = 'virtual-trade-history-row';
+    const give = document.createElement('span'); give.textContent = 'Gave: ' + entry.gave + ' · ' + entry.gaveRarity;
+    const receive = document.createElement('strong'); receive.textContent = 'Received: ' + entry.got + ' · ' + entry.gotRarity;
+    const who = document.createElement('small'); who.textContent = entry.npc + ' · ' + new Date(entry.date).toLocaleDateString('en-GB');
+    row.append(give, receive, who); return row;
+  }));
+  if (!state.tradeHistory.length) {
+    const empty = document.createElement('p'); empty.className = 'note'; empty.textContent = 'No trades yet. Your first swap is waiting.'; $('virtualTradeHistory').append(empty);
+  }
+  syncTradeSelection();
+}
+async function prepareTradeCatalogue() {
+  $('virtualTradeRule').textContent = 'Loading the card catalogue…';
+  try { await ensureTradeCatalogue(); renderTradeOptions(); }
+  catch { $('virtualTradeRule').textContent = 'The card catalogue is unavailable right now. Try again shortly.'; }
+}
+function renderTradeHub() {
+  renderTradeOptions();
+  void prepareTradeCatalogue();
+}
+let pendingNpcTrade = null;
+async function makeNpcTrade() {
+  const button = $('virtualTradeButton');
+  if (button.disabled) return;
+  const offered = selectedTradeOffer();
+  const npc = $('virtualTradeNpc').value;
+  if (!offered) { $('virtualTradeRule').textContent = 'Choose a card you actually own.'; return; }
+  const tier = tradeRarity(offered);
+  button.disabled = true;
+  button.textContent = 'Preparing trade…';
+  try {
+    const catalogue = await ensureTradeCatalogue();
+    const pool = catalogue.filter(brief => {
+      const species = matchPokemon(brief.name);
+      return brief.id !== offered.cardId && (npc !== 'kanto' || species?.region === 'Kanto');
+    });
+    if (!pool.length) { $('virtualTradeRule').textContent = 'No eligible return cards are available right now.'; return; }
+    const chosenId = npc === 'mystery' ? null : $('virtualTradeTarget').value;
+    const brief = chosenId ? pool.find(card => card.id === chosenId) : pool[Math.floor(Math.random() * pool.length)];
+    if (!brief) { $('virtualTradeRule').textContent = 'Choose a valid return card.'; return; }
+    const returnCard = tradeCardFromBrief(brief, tier);
+    if (!returnCard) { $('virtualTradeRule').textContent = 'That return card could not be prepared. Please choose another.'; return; }
+    const lastCopy = state.inventory.filter(card => card.cardId === offered.cardId).length <= 1;
+    pendingNpcTrade = { offeredId: offered.id, returnCard, npc, tier };
+    $('virtualTradeReviewText').textContent = 'You will give ' + offered.name + ' (' + RARITIES[tier] + ') and receive ' + returnCard.name + ' (' + RARITIES[tier] + ') from ' + TRADE_NPCS[npc].name + '.' + (lastCopy ? ' This is your last copy.' : '');
+    $('virtualTradeReview').hidden = false;
+  } catch (error) {
+    console.error('NPC trade preparation failed:', error);
+    $('virtualTradeRule').textContent = 'Trade unavailable: ' + (error?.message || 'the card catalogue could not be loaded') + '. No cards have been exchanged. Please try again.';
+  } finally {
+    button.textContent = 'Review and trade';
+    renderTradeOptions();
+  }
+}
+function completeNpcTrade() {
+  if (!pendingNpcTrade) return;
+  const { offeredId, returnCard, npc, tier } = pendingNpcTrade;
+  const currentIndex = state.inventory.findIndex(card => card.id === offeredId);
+  if (currentIndex < 0) {
+    $('virtualTradeRule').textContent = 'That card is no longer in your inventory. No trade was made.';
+    pendingNpcTrade = null;
+    $('virtualTradeReview').hidden = true;
+    renderTradeOptions();
+    return;
+  }
+  const offered = state.inventory[currentIndex];
+  state.inventory.splice(currentIndex, 1);
+  state.inventory.push(returnCard);
+  if (returnCard.pokemonId && !state.unlockedPokemon.includes(returnCard.pokemonId)) state.unlockedPokemon.push(returnCard.pokemonId);
+  state.tradeHistory.unshift({
+    gave: offered.name, gaveRarity: RARITIES[tier], got: returnCard.name, gotRarity: RARITIES[tier],
+    npc: TRADE_NPCS[npc].name, date: new Date().toISOString(),
+  });
+  state.tradeHistory = state.tradeHistory.slice(0,100);
+  pendingNpcTrade = null;
+  $('virtualTradeReview').hidden = true;
+  save();
+  window.dispatchEvent(new CustomEvent('cardbuddy-virtual-inventory-updated'));
+  renderTradeOptions();
+  renderPacks();
+  $('virtualTradeRule').textContent = 'Trade complete! ' + returnCard.name + ' has been added to your virtual collection.';
+}
+
 function setVirtualView(view) {
-  for (const [name, id] of [['packs','virtualPacksView'],['binder','virtualBinderView'],['pokedex','virtualPokedexView'],['rewards','virtualRewardsView']]) $(id).hidden = name !== view;
+  for (const [name, id] of [['packs','virtualPacksView'],['binder','virtualBinderView'],['pokedex','virtualPokedexView'],['rewards','virtualRewardsView'],['trades','virtualTradesView']]) $(id).hidden = name !== view;
   document.querySelectorAll('[data-virtual-view]').forEach((button) => button.classList.toggle('active', button.dataset.virtualView === view));
   if (view === 'packs') renderPacks();
   if (view === 'pokedex') window.dispatchEvent(new CustomEvent('cardbuddy-virtual-pokedex-render'));
   if (view === 'binder') window.dispatchEvent(new CustomEvent('cardbuddy-virtual-binder-render'));
   if (view === 'rewards') renderChallenges();
+  if (view === 'trades') renderTradeHub();
 }
 document.querySelectorAll('[data-virtual-view]').forEach((button) => {
   button.addEventListener('click', () => setVirtualView(button.dataset.virtualView));
 });
 $('virtualCheckin').addEventListener('click', () => setVirtualView('rewards'));
+$('virtualTradeNpc').addEventListener('change', () => { pendingNpcTrade = null; $('virtualTradeReview').hidden = true; renderTradeOptions(); });
+$('virtualTradeOffer').addEventListener('change', () => { pendingNpcTrade = null; $('virtualTradeReview').hidden = true; syncTradeSelection(); });
+$('virtualTradeTarget').addEventListener('change', renderTradeOptions);
+$('virtualTradeButton').addEventListener('click', makeNpcTrade);
+$('virtualTradeConfirm').addEventListener('click', completeNpcTrade);
+$('virtualTradeCancel').addEventListener('click', () => { pendingNpcTrade = null; $('virtualTradeReview').hidden = true; });
+
 $('virtualCloseRip').addEventListener('click', () => {
   if (currentPack && !ripStarted) state.coins += currentPack.price;
   currentPack = null; pendingCards = []; ripStarted = false;
@@ -314,5 +648,8 @@ for (const [buttonId, sections] of Object.entries(tabs)) {
 resetDaily();
 renderWallet();
 renderCheckin();
+$('virtualRegionalPackRegion').replaceChildren(...REGIONS.map((region) => new Option(region, region)));
+$('virtualRegionalPackRegion').addEventListener('change', renderRegionalPacks);
 renderPacks();
 renderChallenges();
+void repairLegacyInventory();
