@@ -35,7 +35,7 @@ function resetDaily() {
 }
 function renderWallet() { $('virtualCoins').textContent = state.coins.toLocaleString('en-GB'); }
 function packMarkup(pack, small = false) {
-  return '<div class="virtual-pack-face ' + pack.theme + (small ? ' compact' : '') + '"><img src="assets/packs/cardbuddy-' + pack.id + '.webp" alt="' + pack.name + ' CardBuddy booster pack" loading="lazy"><span class="pack-crown">♛</span><strong>CARDBUDDY</strong><small>' + pack.name.toUpperCase() + ' PACK</small></div>';
+  return '<div class="virtual-pack-face ' + pack.theme + (small ? ' compact' : '') + '"><img src="assets/packs/cardbuddy-' + pack.id + '.svg" alt="' + pack.name + ' CardBuddy booster pack" loading="lazy"><span class="pack-crown">♛</span><strong>CARDBUDDY</strong><small>' + pack.name.toUpperCase() + ' PACK</small></div>';
 }
 function renderPacks() {
   $('virtualPackGrid').replaceChildren(...PACKS.map((pack) => {
@@ -126,7 +126,7 @@ function choosePack() {
   $('virtualSelectedPack').hidden = false;
   $('virtualRipInstruction').textContent = 'Your ' + currentPack.name + ' pack is ready';
   $('virtualPackArtwork').className = 'virtual-pack-art ' + currentPack.theme;
-  $('virtualPackArtwork').style.backgroundImage = 'url("assets/packs/cardbuddy-' + currentPack.id + '.webp")';
+  $('virtualPackArtwork').style.backgroundImage = 'url("assets/packs/cardbuddy-' + currentPack.id + '.svg")';
 }
 async function finishRip() {
   if (!currentPack || ripStarted || $('virtualReveal').hidden === false) return;
