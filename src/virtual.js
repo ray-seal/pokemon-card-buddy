@@ -12,7 +12,7 @@ const $ = (id) => document.getElementById(id);
 const safeParse = (value) => { try { return JSON.parse(value); } catch { return null; } };
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => globalThis.crypto?.randomUUID?.() || String(Date.now()) + Math.random().toString(36).slice(2);
-const freshState = () => ({ coins: 100, inventory: [], packsOpened: 0, unlockedPokemon: [], daily: { date: today(), checkin: false, firstPack: false, fivePacks: false, packsOpened: 0 }, history: [] });
+const freshState = () => ({ coins: 100, inventory: [], packsOpened: 0, unlockedPokemon: [], daily: { date: today(), checkin: false, firstPack: false, firstPackEarned: false, fivePacks: false, fivePacksEarned: false, packsOpened: 0 }, history: [] });
 let state = safeParse(localStorage.getItem(STORE)) || freshState();
 if (!Array.isArray(state.inventory)) state.inventory = [];
 if (!Array.isArray(state.unlockedPokemon)) state.unlockedPokemon = [];
@@ -30,8 +30,11 @@ function save() {
   window.dispatchEvent(new CustomEvent('cardbuddy-virtual-inventory-updated'));
 }
 function resetDaily() {
-  if (state.daily?.date !== today()) state.daily = { date: today(), checkin: false, firstPack: false, fivePacks: false, packsOpened: 0 };
+  if (state.daily?.date !== today()) state.daily = { date: today(), checkin: false, firstPack: false, firstPackEarned: false, fivePacks: false, fivePacksEarned: false, packsOpened: 0 };
   if (typeof state.daily.packsOpened !== 'number') state.daily.packsOpened = 0;
+  // Older saves marked bonuses as claimed when they were automatically paid.
+  if (typeof state.daily.firstPackEarned !== 'boolean') state.daily.firstPackEarned = Boolean(state.daily.firstPack);
+  if (typeof state.daily.fivePacksEarned !== 'boolean') state.daily.fivePacksEarned = Boolean(state.daily.fivePacks);
 }
 function renderWallet() { $('virtualCoins').textContent = state.coins.toLocaleString('en-GB'); }
 function packMarkup(pack, small = false) {
@@ -192,8 +195,8 @@ function completePack() {
   resetDaily();
   state.daily.packsOpened += 1;
   state.history.unshift({ date: new Date().toISOString(), pack: currentPack.id, cards: pendingCards.map((card) => card.id) });
-  if (!state.daily.firstPack) { state.daily.firstPack = true; state.coins += 25; }
-  if (state.daily.packsOpened >= 5 && !state.daily.fivePacks) { state.daily.fivePacks = true; state.coins += 75; }
+  if (!state.daily.firstPackEarned) state.daily.firstPackEarned = true;
+  if (state.daily.packsOpened >= 5 && !state.daily.fivePacksEarned) state.daily.fivePacksEarned = true;
   pendingCards = [];
   currentPack = null;
   ripStarted = false;
@@ -203,38 +206,52 @@ function completePack() {
   save();
   renderPacks();
 }
-function claimCheckin() {
+function claimReward(key, amount) {
   resetDaily();
-  if (state.daily.checkin) return;
-  state.daily.checkin = true;
-  state.coins += 25;
+  const earnedKey = key === 'firstPack' ? 'firstPackEarned' : key === 'fivePacks' ? 'fivePacksEarned' : null;
+  if (state.daily[key] || (earnedKey && !state.daily[earnedKey])) return;
+  state.daily[key] = true;
+  state.coins += amount;
   save();
   renderPacks();
+  renderCheckin();
+  renderChallenges();
 }
 function renderCheckin() {
   resetDaily();
-  $('virtualCheckin').disabled = state.daily.checkin;
-  $('virtualCheckin').textContent = state.daily.checkin ? 'Claimed ✓' : 'Claim +25';
-  $('virtualCheckinStatus').textContent = state.daily.checkin ? 'You have collected today’s 25 coins.' : 'Collect your daily 25 coins.';
+  $('virtualCheckin').disabled = false;
+  $('virtualCheckin').textContent = 'View rewards';
+  $('virtualCheckinStatus').textContent = state.daily.checkin ? 'Daily check-in claimed. Visit Rewards for any other coins you have earned.' : 'Your daily 25 coins are waiting on the Rewards screen.';
 }
 function renderChallenges() {
   resetDaily();
   const challenges = [
-    { title: 'Daily check-in', description: 'Claim your daily coins', reward: 25, done: state.daily.checkin },
-    { title: 'First pack of the day', description: 'Open any virtual pack', reward: 25, done: state.daily.firstPack },
-    { title: 'Pack collector', description: 'Open five packs today', reward: 75, done: state.daily.fivePacks },
-    { title: 'Friend trade', description: 'Trade a virtual card with a friend', reward: 50, done: false, locked: true },
-    { title: 'Mystery swap', description: 'Exchange a card with the mystery trader', reward: 25, done: false, locked: true },
+    { key: 'checkin', title: 'Daily check-in', description: 'Claim your daily coins', reward: 25, done: state.daily.checkin, earned: true },
+    { key: 'firstPack', title: 'First pack of the day', description: 'Open any virtual pack', reward: 25, done: state.daily.firstPack, earned: state.daily.firstPackEarned },
+    { key: 'fivePacks', title: 'Pack collector', description: 'Open five packs today', reward: 75, done: state.daily.fivePacks, earned: state.daily.fivePacksEarned },
+    { title: 'Friend trade', description: 'Trade a virtual card with a friend', reward: 50, locked: true },
+    { title: 'Mystery swap', description: 'Exchange a card with the mystery trader', reward: 25, locked: true },
   ];
   $('virtualChallengeList').replaceChildren(...challenges.map((challenge) => {
     const item = document.createElement('article');
     item.className = 'virtual-challenge' + (challenge.done ? ' is-done' : '');
     const copy = document.createElement('div');
     const title = document.createElement('strong'); title.textContent = challenge.title;
-    const description = document.createElement('p'); description.textContent = challenge.description + (challenge.locked ? ' · Coming soon' : '');
+    const description = document.createElement('p');
+    description.textContent = challenge.description + (challenge.locked ? ' · Coming soon' : challenge.earned ? ' · Ready to claim' : challenge.done ? ' · Claimed' : ' · Keep playing');
     copy.append(title, description);
-    const reward = document.createElement('b'); reward.textContent = challenge.done ? 'Claimed ✓' : '+' + challenge.reward + ' 🪙';
-    item.append(copy, reward);
+    const action = document.createElement('div'); action.className = 'virtual-challenge-action';
+    if (challenge.locked) {
+      const reward = document.createElement('b'); reward.textContent = '+' + challenge.reward + ' 🪙'; action.append(reward);
+    } else if (challenge.done) {
+      const reward = document.createElement('b'); reward.textContent = 'Claimed ✓'; action.append(reward);
+    } else if (challenge.earned) {
+      const button = document.createElement('button'); button.type = 'button'; button.textContent = 'Claim +' + challenge.reward;
+      button.addEventListener('click', () => claimReward(challenge.key, challenge.reward)); action.append(button);
+    } else {
+      const reward = document.createElement('b'); reward.textContent = '+' + challenge.reward + ' 🪙'; action.append(reward);
+    }
+    item.append(copy, action);
     return item;
   }));
 }
@@ -249,7 +266,7 @@ function setVirtualView(view) {
 document.querySelectorAll('[data-virtual-view]').forEach((button) => {
   button.addEventListener('click', () => setVirtualView(button.dataset.virtualView));
 });
-$('virtualCheckin').addEventListener('click', () => { claimCheckin(); renderCheckin(); renderChallenges(); });
+$('virtualCheckin').addEventListener('click', () => setVirtualView('rewards'));
 $('virtualCloseRip').addEventListener('click', () => {
   if (currentPack && !ripStarted) state.coins += currentPack.price;
   currentPack = null; pendingCards = []; ripStarted = false;
@@ -258,6 +275,7 @@ $('virtualCloseRip').addEventListener('click', () => {
 });
 $('virtualNextCard').addEventListener('click', nextReveal);
 $('virtualDone').addEventListener('click', completePack);
+$('virtualDone').textContent = 'Add to collection';
 $('virtualPackArtwork').addEventListener('pointerdown', (event) => { touchStartX = event.clientX; });
 $('virtualPackArtwork').addEventListener('pointerup', (event) => { if (touchStartX !== null && Math.abs(event.clientX - touchStartX) > 38) finishRip(); touchStartX = null; });
 $('virtualPackArtwork').addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') finishRip(); });
