@@ -20,6 +20,11 @@ export async function watchAuth(callback) {
 
 export async function currentUser() {
   const client = await getSupabaseClient();
+  // Prefer the persisted session so account state is available immediately on
+  // mobile/PWA startup without requiring a separate auth.getUser network call.
+  const { data: sessionData, error: sessionError } = await client.auth.getSession();
+  if (sessionError) throw sessionError;
+  if (sessionData.session?.user) return sessionData.session.user;
   const { data, error } = await client.auth.getUser();
   if (error && error.name !== 'AuthSessionMissingError') throw error;
   return data.user || null;
