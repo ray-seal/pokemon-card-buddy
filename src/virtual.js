@@ -684,6 +684,7 @@ function completeNpcTrade() {
   }
   const offered = state.inventory[currentIndex];
   state.inventory.splice(currentIndex, 1);
+  window.dispatchEvent(new CustomEvent('cardbuddy-virtual-card-removed', { detail: { id: offered.id } }));
   state.inventory.push(returnCard);
   if (returnCard.pokemonId && !state.unlockedPokemon.includes(returnCard.pokemonId)) state.unlockedPokemon.push(returnCard.pokemonId);
   state.tradeHistory.unshift({
@@ -757,6 +758,17 @@ function spinDailyWheel() {
   window.setTimeout(() => { if (spinInProgress) finish(); }, 5200);
 }
 
+window.addEventListener('cardbuddy-virtual-inventory-replaced', () => {
+  const latest = safeParse(localStorage.getItem(STORE));
+  if (!latest || !Array.isArray(latest.inventory)) return;
+  state.inventory = latest.inventory;
+  state.unlockedPokemon = Array.isArray(latest.unlockedPokemon) ? latest.unlockedPokemon : state.unlockedPokemon;
+  renderWallet();
+  renderPacks();
+  renderTradeOptions();
+  window.dispatchEvent(new CustomEvent('cardbuddy-virtual-inventory-updated'));
+});
+
 function setVirtualView(view) {
   for (const [name, id] of [['packs','virtualPacksView'],['binder','virtualBinderView'],['pokedex','virtualPokedexView'],['rewards','virtualRewardsView'],['trades','virtualTradesView']]) $(id).hidden = name !== view;
   document.querySelectorAll('[data-virtual-view]').forEach((button) => button.classList.toggle('active', button.dataset.virtualView === view));
@@ -797,10 +809,10 @@ $('virtualPackArtwork').setAttribute('role', 'button');
 $('virtualPackArtwork').setAttribute('tabindex', '0');
 
 const tabs = {
-  showCollection: ['collectionSection','binderSection','friendsSection','virtualSection'],
-  showBinder: ['binderSection','collectionSection','friendsSection','virtualSection'],
-  showFriends: ['friendsSection','collectionSection','binderSection','virtualSection'],
-  showVirtual: ['virtualSection','collectionSection','binderSection','friendsSection'],
+  showCollection: ['collectionSection','binderSection','friendsSection','virtualSection','playerTradeSection'],
+  showBinder: ['binderSection','collectionSection','friendsSection','virtualSection','playerTradeSection'],
+  showFriends: ['friendsSection','collectionSection','binderSection','virtualSection','playerTradeSection'],
+  showVirtual: ['virtualSection','collectionSection','binderSection','friendsSection','playerTradeSection'],
 };
 for (const [buttonId, sections] of Object.entries(tabs)) {
   const button = $(buttonId);
