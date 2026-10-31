@@ -58,7 +58,7 @@
       <label>Sort <select id="sort"></select></label>
     </div>
   </section>
-  <nav class="app-tabs" aria-label="App sections"><button id="showCollection" class="active" type="button">Pokédex</button><button id="showBinder" type="button">Binder</button><button id="showFriends" type="button">Friends</button><button id="showVirtual" type="button">✨ Virtual</button></nav>
+  <nav class="app-tabs" aria-label="App sections"><button id="showCollection" class="active" type="button">Pokédex</button><button id="showBinder" type="button">Binder</button><button id="showPlayerTrades" type="button">Trade Hub</button><button id="showFriends" type="button">Friends</button><button id="showVirtual" type="button">✨ Virtual</button></nav>
   <section id="collectionSection">
   <main>
     <ul id="list" class="list"></ul>
@@ -96,6 +96,50 @@
       <div id="binderChoiceOptions" class="binder-choice-options"></div>
       <div class="binder-choice-footer"><button id="binderChoiceCancel" type="button" class="secondary">Cancel</button></div>
     </dialog>
+  </section>
+  <section id="playerTradeSection" hidden aria-label="Player-to-player virtual trading">
+    <div class="p2p-shell">
+      <header class="p2p-heading">
+        <div><p class="p2p-eyebrow">CARDBUDDY ARCADE</p><h2>Player-to-player Trade Hub</h2>
+          <p>Trade virtual cards with accepted friends. Any rarity for any rarity. Physical binders and Pokédex collections are never touched.</p>
+        </div>
+        <button id="p2pRefresh" class="secondary" type="button">↻ Refresh</button>
+      </header>
+      <p id="p2pStatus" class="note p2p-status" role="status" aria-live="polite">Sign in to sync your virtual inventory and open the trading floor.</p>
+      <div class="p2p-compose">
+        <h3>Build an offer</h3>
+        <p class="muted-note">Choose one of your virtual cards and one card from an accepted friend. Both cards are reserved while the offer is active.</p>
+        <p id="p2pFriendEmpty" class="muted-note" hidden>Add and accept a friend in the Friends tab before trading.</p>
+        <label>Trade with
+          <select id="p2pFriend"><option value="">Choose a friend…</option></select>
+        </label>
+        <label>Your card
+          <select id="p2pOwnCard"><option value="">Choose one of your cards…</option></select>
+        </label>
+        <label>Their card
+          <select id="p2pFriendCard"><option value="">Choose a card they own…</option></select>
+        </label>
+        <p id="p2pFriendCardEmpty" class="muted-note" hidden>This friend has no available virtual cards to trade right now.</p>
+        <label>Message (optional)
+          <input id="p2pMessage" type="text" maxlength="180" placeholder="Fancy a swap?">
+        </label>
+        <button id="p2pCreateOffer" class="primary-button" type="button" disabled>Review and send offer</button>
+      </div>
+      <div class="p2p-offer-columns">
+        <section class="p2p-panel">
+          <h3>Incoming offers</h3>
+          <div id="p2pIncoming"></div>
+        </section>
+        <section class="p2p-panel">
+          <h3>Outgoing offers</h3>
+          <div id="p2pOutgoing"></div>
+        </section>
+      </div>
+      <section class="p2p-panel p2p-history-panel">
+        <h3>Completed trades</h3>
+        <div id="p2pHistory"></div>
+      </section>
+    </div>
   </section>
   <section id="friendsSection" hidden aria-label="Friends and collection sharing">
     <div class="friends-layout">
@@ -280,5 +324,6 @@
   <script type="module" src="src/friends.js"></script>
   <script type="module" src="src/virtual.js"></script>
   <script type="module" src="src/virtual-binder.js"></script>
+  <script type="module" src="src/arcade-trades.js"></script>
 </body>
 </html>
