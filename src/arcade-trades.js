@@ -388,3 +388,15 @@ $('p2pFriend').addEventListener('change', async () => {
 $('p2pOwnCard').addEventListener('change', syncCreateButton);
 $('p2pFriendCard').addEventListener('change', syncCreateButton);
 $('p2pCreateOffer').addEventListener('click', createOffer);
+
+window.addEventListener('cardbuddy-virtual-card-removed', async (event) => {
+  const localId = String(event.detail?.id || '');
+  if (!localId) return;
+  try {
+    const { supabase } = await signedInClient();
+    await supabase.rpc('arcade_remove_inventory_card', { p_local_item_id: localId });
+  } catch {
+    // Guest play and offline NPC trades remain local. The next signed-in
+    // inventory refresh will still protect any card already transferred.
+  }
+});
