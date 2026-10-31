@@ -2,6 +2,11 @@ import { loadFriendHub } from './friends-cloud.js';
 import { getSupabaseClient, currentUser } from './cloud.js';
 
 const INVENTORY_KEY = 'cardbuddy.virtual.v1';
+// Module scripts run in strict mode, so keep trade-hub state explicitly scoped.
+let busy = false;
+let friends = [];
+let ownCards = [];
+let friendCards = [];
 const $ = (id) => document.getElementById(id);
 async function signedInClient() {
   const supabase = await getSupabaseClient();
