@@ -123,6 +123,26 @@ function resetDaily() {
   if (typeof state.daily.fivePacksEarned !== 'boolean') state.daily.fivePacksEarned = Boolean(state.daily.fivePacks);
 }
 function renderWallet() { $('virtualCoins').textContent = state.coins.toLocaleString('en-GB'); }
+async function syncCloudWallet() {
+  try {
+    const client = await getSupabaseClient();
+    const { data: authData, error: authError } = await client.auth.getSession();
+    if (authError) throw authError;
+    if (!authData.session?.user) return;
+    const { data, error } = await client.rpc('arcade_wallet_initialize', {
+      p_initial_coins: Math.max(0, Number(state.coins) || 0),
+    });
+    if (error) throw error;
+    state.coins = Number(data);
+    localStorage.setItem(STORE, JSON.stringify(state));
+    renderWallet();
+    renderPacks();
+    window.dispatchEvent(new CustomEvent('cardbuddy-wallet-synced', { detail: { coins: state.coins } }));
+  } catch (error) {
+    console.warn('Cloud wallet sync failed:', error);
+  }
+}
+
 function packMarkup(pack, small = false, variant = null) {
   const assetId = pack.baseId || pack.id;
   const hue = variant?.hue ?? 0;
