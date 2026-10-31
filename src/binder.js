@@ -324,15 +324,36 @@ async function turn(delta) {
   spread.classList.remove('turn-forward', 'turn-back');
   turning = false;
 }
+async function openCardPreview(slot) {
+  if (!slot || slot.type !== 'card') return;
+  const dialog = $('binderCardPreview');
+  const image = $('binderCardPreviewImage');
+  const title = $('binderCardPreviewTitle');
+  if (!dialog || !image || !title) return;
+  image.removeAttribute('src');
+  image.alt = slot.name || 'Collection card';
+  title.textContent = slot.name || 'Collection card';
+  dialog.showModal();
+  try {
+    let src = slot.data || slot.photoUrl || '';
+    if (!src && slot.photoPath) src = await getBinderPhotoUrl(slot.photoPath);
+    if (src && dialog.open) image.src = src;
+    else if (dialog.open) image.alt = 'Card photo is unavailable offline';
+  } catch {
+    if (dialog.open) image.alt = 'Card photo could not be loaded';
+  }
+}
 async function editSlot(index) {
   const binder = activeBinder(); if (!binder) return;
   const existing = binder.pages[pageIndex].slots[index];
   const choice = await chooseAction('What would you like in this pocket?', 'Choose an action for this pocket.', [
+    ...(existing?.type === 'card' ? [{ value: 'VIEW', label: 'View card full size' }] : []),
     { value: 'PHOTO', label: existing?.type === 'card' ? 'Add / replace card photo' : 'Add card photo' },
     { value: 'WANTED', label: existing?.type === 'wanted' ? 'Edit wanted poster' : 'Add wanted poster' },
     ...(existing ? [{ value: 'REMOVE', label: 'Remove / move this item' }] : []),
   ]);
   if (!choice) return;
+  if (choice === 'VIEW') { await openCardPreview(existing); return; }
   if (choice === 'REMOVE') {
     await removeSlot(index); return;
   } else if (choice === 'WANTED') {
