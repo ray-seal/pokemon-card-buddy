@@ -312,7 +312,7 @@ async function refreshHub() {
   status('Connecting to the Arcade trading floor…');
   try {
     const { supabase, user } = await signedInClient();
-    const hub = await loadFriendHub({ supabase, user });
+    const hub = await loadFriendHub({ client: supabase, user });
     friends = hub.friends || [];
     renderFriends();
     await syncAndLoadInventory(supabase);
