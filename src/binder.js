@@ -398,6 +398,7 @@ function compressImage(file) {
 async function init() {
   const section = $('binderSection');
   if (!section) return;
+  $('binderCardPreviewClose')?.addEventListener('click', () => $('binderCardPreview')?.close());
   try { db = await openDb(); binders = await allBinders(); }
   catch { $('binderStatus').textContent = 'Local binder storage is unavailable in this browser.'; return; }
   try {
