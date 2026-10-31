@@ -925,6 +925,7 @@ $('virtualCloseRip').addEventListener('click', () => {
 $('virtualNextCard').addEventListener('click', nextReveal);
 $('virtualDone').addEventListener('click', completePack);
 $('virtualDone').textContent = 'Add to collection';
+void syncCloudWallet();
 $('virtualPackArtwork').addEventListener('pointerdown', (event) => { touchStartX = event.clientX; });
 $('virtualPackArtwork').addEventListener('pointerup', (event) => { if (touchStartX !== null && Math.abs(event.clientX - touchStartX) > 38) finishRip(); touchStartX = null; });
 $('virtualPackArtwork').addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') finishRip(); });
