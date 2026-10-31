@@ -389,10 +389,21 @@ async function repairLegacyInventory() {
     }
   } catch { /* Keep the local collection intact if the catalogue is temporarily offline. */ }
 }
-function startPack(packOrId) {
+async function startPack(packOrId) {
   currentPack = typeof packOrId === 'string' ? PACKS.find((pack) => pack.id === packOrId) : packOrId;
   if (!currentPack || state.coins < currentPack.price) return;
-  state.coins -= currentPack.price;
+  const purchaseKey = 'pack-purchase-' + uid();
+  if (currentPack.price > 0) {
+    try {
+      state.coins = await changeCloudCoins(-currentPack.price, 'pack_purchase:' + currentPack.id, purchaseKey);
+    } catch (error) {
+      currentPack = null;
+      $('virtualRipInstruction').textContent = error?.message || 'Wallet could not confirm this purchase. No pack was opened.';
+      renderPacks();
+      return;
+    }
+  }
+  currentPack.purchaseKey = purchaseKey;
   save();
   ripStarted = false;
   currentPack.choiceVariants = currentPack.regional
@@ -435,7 +446,13 @@ async function finishRip() {
     // Refund exactly once. Clear the paid pack so closing the overlay cannot
     // refund the same purchase again.
     const failedPack = currentPack;
-    if (failedPack) state.coins += failedPack.price;
+    if (failedPack?.price > 0) {
+      try {
+        state.coins = await changeCloudCoins(failedPack.price, 'pack_refund:' + failedPack.id, failedPack.purchaseKey + ':refund');
+      } catch (refundError) {
+        console.error('Pack refund could not be synced:', refundError);
+      }
+    }
     currentPack = null;
     pendingCards = [];
     save(); ripStarted = false;
