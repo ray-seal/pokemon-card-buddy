@@ -1,4 +1,5 @@
 import { POKEMON, REGIONS } from './data/pokemon.js';
+import { getSupabaseClient } from './cloud.js';
 
 const STORE = 'cardbuddy.virtual.v1';
 const PACKS = [
@@ -44,11 +45,74 @@ let cardCataloguePromise = null;
 let touchStartX = null;
 let ripStarted = false;
 
+let cloudSyncTimer = null;
+let cloudSyncRunning = false;
+let cloudSyncQueued = false;
+let cloudSyncLastError = '';
+
+function cloudCardPayload(card) {
+  return {
+    id: String(card.id),
+    name: String(card.name || card.pokemonName || 'Unknown Pokémon'),
+    pokemonName: card.pokemonName || '',
+    pokemonId: card.pokemonId || null,
+    dexNumber: card.dexNumber ?? null,
+    cardId: card.cardId || null,
+    image: card.image || '',
+    setName: card.setName || '',
+    cardNumber: card.cardNumber || '',
+    rarity: card.rarity || 'Common',
+    rarityIndex: Math.max(0, Math.min(5, Number(card.rarityIndex) || 0)),
+    pack: card.pack || 'pack',
+    region: card.region || '',
+  };
+}
+
+async function syncVirtualInventoryToCloud() {
+  if (cloudSyncRunning) { cloudSyncQueued = true; return; }
+  cloudSyncRunning = true;
+  try {
+    const client = await getSupabaseClient();
+    const { data: sessionData, error: sessionError } = await client.auth.getSession();
+    if (sessionError) throw sessionError;
+    if (!sessionData.session?.user) {
+      cloudSyncLastError = 'Sign in to back up your virtual cards for trading.';
+      window.dispatchEvent(new CustomEvent('cardbuddy-virtual-cloud-sync', { detail: { synced: false, reason: 'signed-out' } }));
+      return;
+    }
+    const cards = (Array.isArray(state.inventory) ? state.inventory : []).map(cloudCardPayload);
+    for (let offset = 0; offset < cards.length; offset += 500) {
+      const { error } = await client.rpc('arcade_sync_inventory', { p_cards: cards.slice(offset, offset + 500) });
+      if (error) throw error;
+    }
+    cloudSyncLastError = '';
+    window.dispatchEvent(new CustomEvent('cardbuddy-virtual-cloud-sync', { detail: { synced: true, count: cards.length } }));
+  } catch (error) {
+    cloudSyncLastError = error?.message || 'Virtual inventory cloud sync failed.';
+    window.dispatchEvent(new CustomEvent('cardbuddy-virtual-cloud-sync', { detail: { synced: false, reason: cloudSyncLastError } }));
+  } finally {
+    cloudSyncRunning = false;
+    if (cloudSyncQueued) {
+      cloudSyncQueued = false;
+      void syncVirtualInventoryToCloud();
+    }
+  }
+}
+
+function queueVirtualCloudSync() {
+  if (cloudSyncTimer) window.clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = window.setTimeout(() => {
+    cloudSyncTimer = null;
+    void syncVirtualInventoryToCloud();
+  }, 700);
+}
+
 function save() {
   localStorage.setItem(STORE, JSON.stringify(state));
   renderWallet();
   renderChallenges();
   window.dispatchEvent(new CustomEvent('cardbuddy-virtual-inventory-updated'));
+  queueVirtualCloudSync();
 }
 function resetDaily() {
   if (state.daily?.date !== today()) state.daily = { date: today(), checkin: false, firstPack: false, firstPackEarned: false, fivePacks: false, fivePacksEarned: false, spinClaimed: false, packsOpened: 0 };
@@ -833,4 +897,8 @@ $('virtualRegionalPackRegion').replaceChildren(...REGIONS.map((region) => new Op
 $('virtualRegionalPackRegion').addEventListener('change', renderRegionalPacks);
 renderPacks();
 renderChallenges();
-void repairLegacyInventory();
+void repairLegacyInventory().then(() => syncVirtualInventoryToCloud());
+// Re-sync whenever the account signs in while the Arcade remains open.
+void getSupabaseClient().then(client => client.auth.onAuthStateChange((event, session) => {
+  if (session?.user && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED')) void syncVirtualInventoryToCloud();
+})).catch(() => {});
