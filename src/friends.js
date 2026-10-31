@@ -1,3 +1,4 @@
+import { getSupabaseClient } from './cloud.js';
 import { POKEMON } from './data/pokemon.js';
 import {
   PRESET_AVATARS,
@@ -349,10 +350,7 @@ async function setSignedIn(user) {
 
 async function boot() {
   try {
-    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-    const client = createClient('https://ojnpdosscasvolfhsreh.supabase.co', 'sb_publishable_-I4mu6G34EOY6BxGuDZU6w_cmG-xn9T', {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
-    });
+    const client = await getSupabaseClient();
     client.auth.onAuthStateChange((_event, session) => { queueMicrotask(() => setSignedIn(session?.user || null)); });
     const { data } = await client.auth.getUser();
     await setSignedIn(data.user || null);
