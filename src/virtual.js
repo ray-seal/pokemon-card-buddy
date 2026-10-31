@@ -857,7 +857,7 @@ function spinDailyWheel() {
   const rotation = 360 * 6 + ((360 - centre) % 360);
   const wheel = $('virtualSpinWheel');
   wheel.style.transform = 'rotate(' + rotation + 'deg)';
-  const finish = () => {
+  const finish = async () => {
     wheel.removeEventListener('transitionend', finish);
     if (!spinInProgress) return;
     state.daily.spinClaimed = true;
