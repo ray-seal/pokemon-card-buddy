@@ -61,8 +61,8 @@ export async function requestFriendByCode(code) {
   return data;
 }
 
-export async function loadFriendHub() {
-  const { client, user } = await signedInUser();
+export async function loadFriendHub(authContext = null) {
+  const { client, user } = authContext || await signedInUser();
   const [friendshipsResult, profileResult, collectionsResult, sharesResult] = await Promise.all([
     client.from('friendships').select('id,user_a,user_b,requested_by,status,created_at').order('created_at', { ascending: false }),
     client.from('user_profiles').select('user_id,username,friend_code,avatar_id').eq('user_id', user.id).maybeSingle(),
