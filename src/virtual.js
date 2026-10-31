@@ -863,8 +863,15 @@ function spinDailyWheel() {
     state.daily.spinClaimed = true;
     let message;
     if (prize.type === 'coins') {
-      state.coins += prize.amount;
-      message = 'You won ' + prize.amount + ' coins! They have been added to your wallet.';
+      try {
+        state.coins = await changeCloudCoins(prize.amount, 'daily_spin_reward', 'daily-spin-' + today());
+        message = 'You won ' + prize.amount + ' coins! They have been added to your wallet.';
+      } catch (error) {
+        spinInProgress = false;
+        renderDailySpin();
+        $('virtualSpinStatus').textContent = error?.message || 'Your spin reward could not be saved.';
+        return;
+      }
     } else if (prize.type === 'pack') {
       state.freePacks += 1;
       message = 'LEGENDARY! You won a free Legendary card pack. Find it waiting in Packs!';
