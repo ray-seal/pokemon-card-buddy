@@ -311,8 +311,8 @@ async function refreshHub() {
   setBusy(true);
   status('Connecting to the Arcade trading floor…');
   try {
-    const { supabase } = await signedInClient();
-    const hub = await loadFriendHub({ supabase, user: (await currentUser()) });
+    const { supabase, user } = await signedInClient();
+    const hub = await loadFriendHub({ supabase, user });
     friends = hub.friends || [];
     renderFriends();
     await syncAndLoadInventory(supabase);
