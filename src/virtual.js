@@ -661,6 +661,7 @@ function spinDailyWheel() {
     save();
     $('virtualSpinStatus').textContent = message;
     renderDailySpin();
+    $('virtualSpinStatus').textContent = message;
     renderPacks();
   };
   wheel.addEventListener('transitionend', finish, { once: true });
