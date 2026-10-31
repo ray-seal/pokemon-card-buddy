@@ -574,3 +574,30 @@ main { max-width:54rem; margin:0 auto; padding:0 1rem 2rem; }
 .virtual-free-pack { border-color:#d9b76d; box-shadow:0 0 20px #eac46b25; }
 @media(max-width:35rem) { .virtual-wheel-label { width:3.7rem; font-size:.48rem; transform:translate(-50%,-50%) rotate(var(--angle)) translateY(-5.65rem) rotate(calc(-1 * var(--angle))); } .virtual-wheel-sorry { width:4rem; font-size:.43rem; } .virtual-wheel-hub { width:4.5rem; height:4.5rem; } }
 @media(prefers-reduced-motion:reduce) { .virtual-spin-wheel { transition:none; } }
+
+/* Full-size physical binder card preview */
+.binder-card-preview {
+  width: min(92vw, 34rem);
+  max-width: 34rem;
+  max-height: min(94dvh, 58rem);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid rgba(125,170,255,.4);
+  border-radius: 1.2rem;
+  color: var(--fg,#edf3ff);
+  background: #10182a;
+  box-shadow: 0 1rem 4rem #000b;
+}
+.binder-card-preview::backdrop { background: rgba(2,6,18,.82); backdrop-filter: blur(5px); }
+.binder-card-preview-inner { display: grid; justify-items: center; gap: .8rem; }
+.binder-card-preview img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  max-height: min(72dvh, 46rem);
+  object-fit: contain;
+  border-radius: .7rem;
+  box-shadow: 0 8px 28px #0008;
+}
+.binder-card-preview h3 { margin: .2rem 0; text-align: center; overflow-wrap: anywhere; }
+.binder-card-preview button { min-width: 7rem; }
