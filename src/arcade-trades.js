@@ -1,21 +1,14 @@
 import { loadFriendHub } from './friends-cloud.js';
-import { getSupabaseClient } from './cloud.js';
+import { getSupabaseClient, currentUser } from './cloud.js';
 
 const INVENTORY_KEY = 'cardbuddy.virtual.v1';
 const $ = (id) => document.getElementById(id);
 async function signedInClient() {
   const supabase = await getSupabaseClient();
-  // getSession reads the persisted browser session and waits for Supabase auth
-  // initialization. getUser alone can briefly return no user during app startup.
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-  if (sessionError) throw sessionError;
-  let user = sessionData.session?.user || null;
-  if (!user) {
-    const { data, error } = await supabase.auth.getUser();
-    if (error && error.name !== 'AuthSessionMissingError') throw error;
-    user = data.user || null;
-  }
-  if (!user) throw new Error('CardBuddy could not find your saved sign-in session. Please open Friends, check that your account is signed in, then return to Trade Hub and refresh.');
+  // Use the same currentUser() check as CardBuddy's account panel. This is the
+  // canonical auth path used by the rest of the app.
+  const user = await currentUser();
+  if (!user) throw new Error('CardBuddy account status says you are signed out. Please check the account panel at the top of the app.');
   return { supabase, user };
 }
 function readLocalState() {
@@ -319,7 +312,7 @@ async function refreshHub() {
   status('Connecting to the Arcade trading floor…');
   try {
     const { supabase } = await signedInClient();
-    const hub = await loadFriendHub();
+    const hub = await loadFriendHub({ supabase, user: (await currentUser()) });
     friends = hub.friends || [];
     renderFriends();
     await syncAndLoadInventory(supabase);
