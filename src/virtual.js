@@ -28,7 +28,8 @@ const freshState = () => ({ coins: 100, inventory: [], packsOpened: 0, unlockedP
 let state = safeParse(localStorage.getItem(STORE)) || freshState();
 if (!Array.isArray(state.inventory)) state.inventory = [];
 if (!Array.isArray(state.unlockedPokemon)) state.unlockedPokemon = [];
-if (!Array.isArray(state.tradeHistory)) state.tradeHistory = [];\nif (!Number.isInteger(state.freePacks) || state.freePacks < 0) state.freePacks = 0;
+if (!Array.isArray(state.tradeHistory)) state.tradeHistory = [];
+if (!Number.isInteger(state.freePacks) || state.freePacks < 0) state.freePacks = 0;
 for (const card of state.inventory) {
   if (!card.id) card.id = uid();
   if (typeof card.id !== 'string') card.id = String(card.id);
@@ -50,7 +51,8 @@ function save() {
   window.dispatchEvent(new CustomEvent('cardbuddy-virtual-inventory-updated'));
 }
 function resetDaily() {
-  if (state.daily?.date !== today()) state.daily = { date: today(), checkin: false, firstPack: false, firstPackEarned: false, fivePacks: false, fivePacksEarned: false, spinClaimed: false, packsOpened: 0 };\n  if (typeof state.daily.spinClaimed !== 'boolean') state.daily.spinClaimed = false;
+  if (state.daily?.date !== today()) state.daily = { date: today(), checkin: false, firstPack: false, firstPackEarned: false, fivePacks: false, fivePacksEarned: false, spinClaimed: false, packsOpened: 0 };
+  if (typeof state.daily.spinClaimed !== 'boolean') state.daily.spinClaimed = false;
   if (typeof state.daily.packsOpened !== 'number') state.daily.packsOpened = 0;
   // Older saves marked bonuses as claimed when they were automatically paid.
   if (typeof state.daily.firstPackEarned !== 'boolean') state.daily.firstPackEarned = Boolean(state.daily.firstPack);
@@ -82,7 +84,22 @@ function regionalPacks(region) {
 }
 function renderPacks() {
   renderPackCards($('virtualPackGrid'), PACKS);
+  renderFreePackReward();
   renderRegionalPacks();
+}
+function renderFreePackReward() {
+  if (!state.freePacks) return;
+  const reward = document.createElement('article');
+  reward.className = 'virtual-pack-card virtual-free-pack';
+  reward.innerHTML = '<div class="virtual-pack-face gold"><img src="assets/packs/cardbuddy-legendary.svg" alt="Free Legendary CardBuddy pack"></div><div class="virtual-pack-meta"><h4>Free Legendary Pack</h4><p>Daily Spin to Win reward · no coins needed</p><div class="virtual-pack-buy"><strong>🎁 ' + state.freePacks + ' ready</strong><button type="button">Open free pack</button></div></div>';
+  reward.querySelector('button').addEventListener('click', () => {
+    if (!state.freePacks) return;
+    state.freePacks -= 1;
+    save();
+    startPack({ ...PACKS.find(pack => pack.id === 'legendary'), price: 0, freeReward: true });
+    renderPacks();
+  });
+  $('virtualPackGrid').prepend(reward);
 }
 function renderRegionalPacks() {
   const region = $('virtualRegionalPackRegion').value || REGIONS[0];
@@ -650,7 +667,8 @@ function spinDailyWheel() {
   // A fallback prevents a stuck spin if reduced motion or a browser drops transitionend.
   window.setTimeout(() => { if (spinInProgress) finish(); }, 5200);
 }
-\nfunction setVirtualView(view) {
+
+function setVirtualView(view) {
   for (const [name, id] of [['packs','virtualPacksView'],['binder','virtualBinderView'],['pokedex','virtualPokedexView'],['rewards','virtualRewardsView'],['trades','virtualTradesView']]) $(id).hidden = name !== view;
   document.querySelectorAll('[data-virtual-view]').forEach((button) => button.classList.toggle('active', button.dataset.virtualView === view));
   if (view === 'packs') renderPacks();
@@ -662,7 +680,8 @@ function spinDailyWheel() {
 document.querySelectorAll('[data-virtual-view]').forEach((button) => {
   button.addEventListener('click', () => setVirtualView(button.dataset.virtualView));
 });
-$('virtualCheckin').addEventListener('click', () => setVirtualView('rewards'));\n$('virtualSpinButton').addEventListener('click', spinDailyWheel);
+$('virtualCheckin').addEventListener('click', () => setVirtualView('rewards'));
+$('virtualSpinButton').addEventListener('click', spinDailyWheel);
 $('virtualTradeNpc').addEventListener('change', () => { pendingNpcTrade = null; $('virtualTradeReview').hidden = true; renderTradeOptions(); });
 $('virtualTradeOffer').addEventListener('change', () => { pendingNpcTrade = null; $('virtualTradeReview').hidden = true; syncTradeSelection(); });
 $('virtualTradeTarget').addEventListener('change', renderTradeOptions);
