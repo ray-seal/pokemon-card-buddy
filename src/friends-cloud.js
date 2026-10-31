@@ -14,6 +14,15 @@ const AVATARS = {
 
 export const PRESET_AVATARS = AVATARS;
 
+async function signedInUser() {
+  const client = await getSupabaseClient();
+  const { data, error } = await client.auth.getSession();
+  if (error) throw error;
+  const user = data.session?.user || null;
+  if (!user) throw new Error('Sign in to your CardBuddy account first.');
+  return { client, user };
+}
+
 export async function getMyFriendProfile() {
   const { client, user } = await signedInUser();
   const { data, error } = await client.from('user_profiles')
