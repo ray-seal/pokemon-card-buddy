@@ -83,6 +83,13 @@
     </div>
     <div class="binder-page-controls"><button id="addBinderPage" type="button">＋ Add page</button><button id="deleteBinderPage" type="button">Remove current page</button></div>
     <input id="binderPhotoInput" type="file" accept="image/*" capture="environment" hidden>
+    <dialog id="binderCardPreview" class="binder-card-preview" aria-labelledby="binderCardPreviewTitle">
+      <div class="binder-card-preview-inner">
+        <img id="binderCardPreviewImage" alt="Collection card">
+        <h3 id="binderCardPreviewTitle">Collection card</h3>
+        <button id="binderCardPreviewClose" type="button" class="secondary">Close</button>
+      </div>
+    </dialog>
     <dialog id="binderChoiceDialog" class="binder-choice-dialog" aria-labelledby="binderChoiceTitle">
       <h3 id="binderChoiceTitle">Choose an action</h3>
       <p id="binderChoiceMessage"></p>
