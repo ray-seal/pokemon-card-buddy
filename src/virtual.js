@@ -142,6 +142,22 @@ async function syncCloudWallet() {
     console.warn('Cloud wallet sync failed:', error);
   }
 }
+async function changeCloudCoins(delta, reason, idempotencyKey) {
+  const client = await getSupabaseClient();
+  const { data: authData, error: authError } = await client.auth.getSession();
+  if (authError) throw authError;
+  if (!authData.session?.user) {
+    state.coins = Math.max(0, state.coins + delta);
+    return state.coins;
+  }
+  const { data, error } = await client.rpc('arcade_wallet_change', {
+    p_delta: delta,
+    p_reason: reason,
+    p_idempotency_key: idempotencyKey,
+  });
+  if (error) throw error;
+  return Number(data);
+}
 
 function packMarkup(pack, small = false, variant = null) {
   const assetId = pack.baseId || pack.id;
