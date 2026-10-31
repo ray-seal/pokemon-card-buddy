@@ -1,11 +1,11 @@
 // Bump CACHE_VERSION on every release that changes cached files.
 // Only caches created by this app (prefix "kanto151-shell-") are ever deleted;
 // the collection lives in localStorage, which the service worker never touches.
-const CACHE_VERSION = 'v34';
+const CACHE_VERSION = 'v35';
 const CACHE = `kanto151-shell-${CACHE_VERSION}`;
 const ASSETS = [
   './', './index.html', './styles.css', './spin-wheel.css', './manifest.webmanifest',
-  './src/main.js', './src/virtual.js', './src/arcade-trades.js', './src/virtual-binder.js', './src/binder.js', './src/storage.js', './src/collection.js', './src/filter.js', './src/cloud.js',
+  './src/main.js', './src/virtual.js', './src/arcade-trades.js', './src/virtual-binder.js', './src/binder.js', './src/storage.js', './src/collection.js', './src/filter.js', './src/cloud.js', './src/friends-cloud.js', './src/friends.js',
   './src/data/pokemon.js', './assets/packs/cardbuddy-starter.svg', './assets/packs/cardbuddy-premium.svg', './assets/packs/cardbuddy-elite.svg', './assets/packs/cardbuddy-legendary.svg',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
 ];
