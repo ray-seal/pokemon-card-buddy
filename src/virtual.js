@@ -573,7 +573,8 @@ function selectedTradeOffer() {
   const offer = $('virtualTradeOffer');
   const option = offer.options[offer.selectedIndex];
   const index = option ? Number(option.dataset.inventoryIndex) : -1;
-  return Number.isInteger(index) && index >= 0 ? state.inventory[index] || null : null;
+  const card = Number.isInteger(index) && index >= 0 ? state.inventory[index] || null : null;
+  return card && !card.reserved ? card : null;
 }
 function syncTradeSelection() {
   const npc = $('virtualTradeNpc').value;
@@ -593,7 +594,8 @@ function renderTradeOptions(preferredOfferId = '') {
   const selectedId = selected ? String(selected.id) : String(preferredOfferId || '');
   const inventory = [...state.inventory].sort((a,b) => String(a.name || '').localeCompare(String(b.name || '')));
   offer.replaceChildren(new Option('Choose a card you own…',''), ...inventory.map(card => {
-    const option = new Option(String(card.name || card.pokemonName || 'Unknown Pokémon') + ' · ' + RARITIES[tradeRarity(card)] + (state.inventory.filter(item => item.cardId && item.cardId === card.cardId).length === 1 ? ' · last copy' : ''), String(card.id));
+    const option = new Option(String(card.name || card.pokemonName || 'Unknown Pokémon') + ' · ' + RARITIES[tradeRarity(card)] + (card.reserved ? ' · reserved in player trade' : (state.inventory.filter(item => item.cardId && item.cardId === card.cardId).length === 1 ? ' · last copy' : '')), String(card.id));
+    option.disabled = Boolean(card.reserved);
     option.dataset.inventoryIndex = String(state.inventory.indexOf(card));
     return option;
   }));
