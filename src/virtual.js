@@ -24,11 +24,12 @@ const $ = (id) => document.getElementById(id);
 const safeParse = (value) => { try { return JSON.parse(value); } catch { return null; } };
 const today = () => new Date().toISOString().slice(0, 10);
 const uid = () => globalThis.crypto?.randomUUID?.() || String(Date.now()) + Math.random().toString(36).slice(2);
-const freshState = () => ({ coins: 100, inventory: [], packsOpened: 0, unlockedPokemon: [], daily: { date: today(), checkin: false, firstPack: false, firstPackEarned: false, fivePacks: false, fivePacksEarned: false, packsOpened: 0 }, history: [] });
+const freshState = () => ({ coins: 100, inventory: [], packsOpened: 0, unlockedPokemon: [], freePacks: 0, daily: { date: today(), checkin: false, firstPack: false, firstPackEarned: false, fivePacks: false, fivePacksEarned: false, spinClaimed: false, packsOpened: 0 }, history: [] });
 let state = safeParse(localStorage.getItem(STORE)) || freshState();
 if (!Array.isArray(state.inventory)) state.inventory = [];
 if (!Array.isArray(state.unlockedPokemon)) state.unlockedPokemon = [];
 if (!Array.isArray(state.tradeHistory)) state.tradeHistory = [];
+if (!Number.isInteger(state.freePacks) || state.freePacks < 0) state.freePacks = 0;
 for (const card of state.inventory) {
   if (!card.id) card.id = uid();
   if (typeof card.id !== 'string') card.id = String(card.id);
@@ -50,7 +51,8 @@ function save() {
   window.dispatchEvent(new CustomEvent('cardbuddy-virtual-inventory-updated'));
 }
 function resetDaily() {
-  if (state.daily?.date !== today()) state.daily = { date: today(), checkin: false, firstPack: false, firstPackEarned: false, fivePacks: false, fivePacksEarned: false, packsOpened: 0 };
+  if (state.daily?.date !== today()) state.daily = { date: today(), checkin: false, firstPack: false, firstPackEarned: false, fivePacks: false, fivePacksEarned: false, spinClaimed: false, packsOpened: 0 };
+  if (typeof state.daily.spinClaimed !== 'boolean') state.daily.spinClaimed = false;
   if (typeof state.daily.packsOpened !== 'number') state.daily.packsOpened = 0;
   // Older saves marked bonuses as claimed when they were automatically paid.
   if (typeof state.daily.firstPackEarned !== 'boolean') state.daily.firstPackEarned = Boolean(state.daily.firstPack);
@@ -82,7 +84,22 @@ function regionalPacks(region) {
 }
 function renderPacks() {
   renderPackCards($('virtualPackGrid'), PACKS);
+  renderFreePackReward();
   renderRegionalPacks();
+}
+function renderFreePackReward() {
+  if (!state.freePacks) return;
+  const reward = document.createElement('article');
+  reward.className = 'virtual-pack-card virtual-free-pack';
+  reward.innerHTML = '<div class="virtual-pack-face gold"><img src="assets/packs/cardbuddy-legendary.svg" alt="Free Legendary CardBuddy pack"></div><div class="virtual-pack-meta"><h4>Free Legendary Pack</h4><p>Daily Spin to Win reward · no coins needed</p><div class="virtual-pack-buy"><strong>🎁 ' + state.freePacks + ' ready</strong><button type="button">Open free pack</button></div></div>';
+  reward.querySelector('button').addEventListener('click', () => {
+    if (!state.freePacks) return;
+    state.freePacks -= 1;
+    save();
+    startPack({ ...PACKS.find((pack) => pack.id === 'legendary'), price: 0, freeReward: true });
+    renderPacks();
+  });
+  $('virtualPackGrid').prepend(reward);
 }
 function renderRegionalPacks() {
   const region = $('virtualRegionalPackRegion').value || REGIONS[0];
@@ -682,19 +699,77 @@ function completeNpcTrade() {
   $('virtualTradeRule').textContent = 'Trade complete! ' + returnCard.name + ' has been added to your virtual collection. It is selected and ready to trade again.';
 }
 
+
+const SPIN_PRIZES = [
+  { label: 'Sorry, better luck next time', type: 'sorry' },
+  { label: '15 coins', type: 'coins', amount: 15 },
+  { label: '25 coins', type: 'coins', amount: 25 },
+  { label: '35 coins', type: 'coins', amount: 35 },
+  { label: '50 coins', type: 'coins', amount: 50 },
+  { label: '65 coins', type: 'coins', amount: 65 },
+  { label: '75 coins', type: 'coins', amount: 75 },
+  { label: '100 coins', type: 'coins', amount: 100 },
+  { label: 'Legendary card pack', type: 'pack' },
+];
+let spinInProgress = false;
+function renderDailySpin() {
+  resetDaily();
+  const claimed = state.daily.spinClaimed;
+  $('virtualSpinButton').disabled = claimed || spinInProgress;
+  $('virtualSpinButton').textContent = claimed ? 'Come back tomorrow' : 'Spin the wheel';
+  if (!spinInProgress) $('virtualSpinStatus').textContent = claimed ? 'You have already had your spin today. The wheel resets tomorrow!' : 'Your daily spin is ready!';
+  $('virtualSpinWheel').classList.toggle('is-spent', claimed);
+}
+function spinDailyWheel() {
+  resetDaily();
+  if (state.daily.spinClaimed || spinInProgress) return;
+  spinInProgress = true;
+  $('virtualSpinButton').disabled = true;
+  $('virtualSpinStatus').textContent = 'The wheel is spinning…';
+  const prizeIndex = Math.floor(Math.random() * SPIN_PRIZES.length);
+  const prize = SPIN_PRIZES[prizeIndex];
+  const centre = prizeIndex * 40 + 20;
+  const rotation = 360 * 6 + ((360 - centre) % 360);
+  const wheel = $('virtualSpinWheel');
+  wheel.style.transform = 'rotate(' + rotation + 'deg)';
+  const finish = () => {
+    wheel.removeEventListener('transitionend', finish);
+    if (!spinInProgress) return;
+    state.daily.spinClaimed = true;
+    let message;
+    if (prize.type === 'coins') {
+      state.coins += prize.amount;
+      message = 'You won ' + prize.amount + ' coins! They have been added to your wallet.';
+    } else if (prize.type === 'pack') {
+      state.freePacks += 1;
+      message = 'LEGENDARY! You won a free Legendary card pack. Find it waiting in Packs!';
+    } else {
+      message = 'Sorry, better luck next time! Your next spin is tomorrow.';
+    }
+    spinInProgress = false;
+    save();
+    renderDailySpin();
+    $('virtualSpinStatus').textContent = message;
+    renderPacks();
+  };
+  wheel.addEventListener('transitionend', finish, { once: true });
+  window.setTimeout(() => { if (spinInProgress) finish(); }, 5200);
+}
+
 function setVirtualView(view) {
   for (const [name, id] of [['packs','virtualPacksView'],['binder','virtualBinderView'],['pokedex','virtualPokedexView'],['rewards','virtualRewardsView'],['trades','virtualTradesView']]) $(id).hidden = name !== view;
   document.querySelectorAll('[data-virtual-view]').forEach((button) => button.classList.toggle('active', button.dataset.virtualView === view));
   if (view === 'packs') renderPacks();
   if (view === 'pokedex') window.dispatchEvent(new CustomEvent('cardbuddy-virtual-pokedex-render'));
   if (view === 'binder') window.dispatchEvent(new CustomEvent('cardbuddy-virtual-binder-render'));
-  if (view === 'rewards') renderChallenges();
+  if (view === 'rewards') { renderChallenges(); renderDailySpin(); }
   if (view === 'trades') renderTradeHub();
 }
 document.querySelectorAll('[data-virtual-view]').forEach((button) => {
   button.addEventListener('click', () => setVirtualView(button.dataset.virtualView));
 });
 $('virtualCheckin').addEventListener('click', () => setVirtualView('rewards'));
+$('virtualSpinButton').addEventListener('click', spinDailyWheel);
 $('virtualTradeNpc').addEventListener('change', () => { pendingNpcTrade = null; $('virtualTradeReview').hidden = true; renderTradeOptions(); });
 $('virtualTradeOffer').addEventListener('change', () => { pendingNpcTrade = null; $('virtualTradeReview').hidden = true; syncTradeSelection(); });
 $('virtualTradeTarget').addEventListener('change', renderTradeOptions);
