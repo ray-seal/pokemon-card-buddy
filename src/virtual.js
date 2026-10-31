@@ -531,16 +531,20 @@ function completePack() {
   save();
   renderPacks();
 }
-function claimReward(key, amount) {
+async function claimReward(key, amount) {
   resetDaily();
   const earnedKey = key === 'firstPack' ? 'firstPackEarned' : key === 'fivePacks' ? 'fivePacksEarned' : null;
   if (state.daily[key] || (earnedKey && !state.daily[earnedKey])) return;
-  state.daily[key] = true;
-  state.coins += amount;
-  save();
-  renderPacks();
-  renderCheckin();
-  renderChallenges();
+  try {
+    state.coins = await changeCloudCoins(amount, 'daily_reward:' + key, 'daily-reward-' + today() + '-' + key);
+    state.daily[key] = true;
+    save();
+    renderPacks();
+    renderCheckin();
+    renderChallenges();
+  } catch (error) {
+    console.warn('Daily reward sync failed:', error);
+  }
 }
 function renderCheckin() {
   resetDaily();
