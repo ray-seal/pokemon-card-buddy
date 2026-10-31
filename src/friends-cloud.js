@@ -1,25 +1,4 @@
-const SUPABASE_URL = 'https://ojnpdosscasvolfhsreh.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_-I4mu6G34EOY6BxGuDZU6w_cmG-xn9T';
-let clientPromise;
-
-async function getClient() {
-  if (!clientPromise) {
-    clientPromise = import('https://esm.sh/@supabase/supabase-js@2').then(({ createClient }) =>
-      createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
-      })
-    );
-  }
-  return clientPromise;
-}
-
-async function signedInUser() {
-  const client = await getClient();
-  const { data, error } = await client.auth.getUser();
-  if (error && error.name !== 'AuthSessionMissingError') throw error;
-  if (!data.user) throw new Error('Sign in to use Friends.');
-  return { client, user: data.user };
-}
+import { getSupabaseClient } from './cloud.js';
 
 const AVATARS = {
   pokeball: '🔴',
