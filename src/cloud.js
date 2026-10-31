@@ -2,7 +2,7 @@ const SUPABASE_URL = 'https://ojnpdosscasvolfhsreh.supabase.co';
 const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_-I4mu6G34EOY6BxGuDZU6w_cmG-xn9T';
 let clientPromise;
 
-async function getClient() {
+export async function getSupabaseClient() {
   if (!clientPromise) {
     clientPromise = import('https://esm.sh/@supabase/supabase-js@2').then(({ createClient }) =>
       createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
@@ -14,19 +14,19 @@ async function getClient() {
 }
 
 export async function watchAuth(callback) {
-  const client = await getClient();
+  const client = await getSupabaseClient();
   return client.auth.onAuthStateChange((_event, session) => callback(session?.user || null));
 }
 
 export async function currentUser() {
-  const client = await getClient();
+  const client = await getSupabaseClient();
   const { data, error } = await client.auth.getUser();
   if (error && error.name !== 'AuthSessionMissingError') throw error;
   return data.user || null;
 }
 
 export async function signUp(email, password) {
-  const client = await getClient();
+  const client = await getSupabaseClient();
   const emailRedirectTo = window.location.origin + window.location.pathname;
   const { data, error } = await client.auth.signUp({
     email,
@@ -38,14 +38,14 @@ export async function signUp(email, password) {
 }
 
 export async function signIn(email, password) {
-  const client = await getClient();
+  const client = await getSupabaseClient();
   const { data, error } = await client.auth.signInWithPassword({ email, password });
   if (error) throw error;
   return data;
 }
 
 export async function signOut() {
-  const client = await getClient();
+  const client = await getSupabaseClient();
   const { error } = await client.auth.signOut();
   if (error) throw error;
 }
@@ -72,7 +72,7 @@ function sameChecklist(a, b) {
 }
 
 export async function inspectCollectionSync(name, localCollection) {
-  const client = await getClient();
+  const client = await getSupabaseClient();
   const user = await currentUser();
   if (!user) throw new Error('Please sign in first.');
   const { data: rows, error } = await client
@@ -92,7 +92,7 @@ export async function inspectCollectionSync(name, localCollection) {
 }
 
 export async function loadCloudCollections() {
-  const client = await getClient();
+  const client = await getSupabaseClient();
   const user = await currentUser();
   if (!user) return [];
   const { data, error } = await client.from('user_collections')
@@ -104,7 +104,7 @@ export async function loadCloudCollections() {
 }
 
 export async function syncCollection(name, localCollection) {
-  const client = await getClient();
+  const client = await getSupabaseClient();
   const user = await currentUser();
   if (!user) throw new Error('Please sign in first.');
   const { data: rows, error: readError } = await client
@@ -143,14 +143,14 @@ export async function syncCollection(name, localCollection) {
 }
 
 export async function getUsername(userId) {
-  const client = await getClient();
+  const client = await getSupabaseClient();
   const { data, error } = await client.from('user_profiles').select('username').eq('user_id', userId).maybeSingle();
   if (error) throw error;
   return data?.username || null;
 }
 
 export async function saveUsername(username) {
-  const client = await getClient();
+  const client = await getSupabaseClient();
   const user = await currentUser();
   if (!user) throw new Error('Please sign in first.');
   const clean = String(username || '').trim();
@@ -168,7 +168,7 @@ export async function saveUsername(username) {
 }
 
 export async function saveCloudBinder(localBinder) {
-  const client = await getClient();
+  const client = await getSupabaseClient();
   const user = await currentUser();
   if (!user) throw new Error('Sign in to back up binder photos and pages.');
   const binder = structuredClone(localBinder);
@@ -218,7 +218,7 @@ export async function saveCloudBinder(localBinder) {
 }
 
 export async function loadCloudBinders() {
-  const client = await getClient();
+  const client = await getSupabaseClient();
   const user = await currentUser();
   if (!user) return [];
   const { data, error } = await client.from('binders')
@@ -239,14 +239,14 @@ export async function loadCloudBinders() {
 }
 
 export async function getBinderPhotoUrl(path) {
-  const client = await getClient();
+  const client = await getSupabaseClient();
   const { data, error } = await client.storage.from('binder-photos').createSignedUrl(path, 3600);
   if (error) throw error;
   return data.signedUrl;
 }
 
 export async function deleteCloudBinder(localId) {
-  const client = await getClient();
+  const client = await getSupabaseClient();
   const user = await currentUser();
   if (!user) return;
   const { data: rows, error: readError } = await client.from('binders').select('id,pages')
