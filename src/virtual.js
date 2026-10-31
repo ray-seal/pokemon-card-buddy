@@ -860,7 +860,6 @@ function spinDailyWheel() {
   const finish = async () => {
     wheel.removeEventListener('transitionend', finish);
     if (!spinInProgress) return;
-    state.daily.spinClaimed = true;
     let message;
     if (prize.type === 'coins') {
       try {
@@ -878,6 +877,7 @@ function spinDailyWheel() {
     } else {
       message = 'Sorry, better luck next time! Your next spin is tomorrow.';
     }
+    state.daily.spinClaimed = true;
     spinInProgress = false;
     save();
     renderDailySpin();
@@ -920,10 +920,17 @@ $('virtualTradeButton').addEventListener('click', makeNpcTrade);
 $('virtualTradeConfirm').addEventListener('click', completeNpcTrade);
 $('virtualTradeCancel').addEventListener('click', () => { pendingNpcTrade = null; $('virtualTradeReview').hidden = true; });
 
-$('virtualCloseRip').addEventListener('click', () => {
+$('virtualCloseRip').addEventListener('click', async () => {
   if (currentPack && !ripStarted) {
     if (currentPack.freeReward) state.freePacks += 1;
-    else state.coins += currentPack.price;
+    else if (currentPack.price > 0) {
+      try {
+        state.coins = await changeCloudCoins(currentPack.price, 'pack_cancel_refund:' + currentPack.id, currentPack.purchaseKey + ':cancel-refund');
+      } catch (error) {
+        $('virtualRipInstruction').textContent = error?.message || 'Refund could not be confirmed. Please keep this screen open and retry.';
+        return;
+      }
+    }
   }
   currentPack = null; pendingCards = []; ripStarted = false;
   $('virtualCloseRip').hidden = false; $('virtualRipOverlay').hidden = true;
