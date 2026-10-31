@@ -1,27 +1,10 @@
 import { loadFriendHub } from './friends-cloud.js';
+import { getSupabaseClient } from './cloud.js';
 
-const SUPABASE_URL = 'https://ojnpdosscasvolfhsreh.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_-I4mu6G34EOY6BxGuDZU6w_cmG-xn9T';
 const INVENTORY_KEY = 'cardbuddy.virtual.v1';
 const $ = (id) => document.getElementById(id);
-let clientPromise;
-let friends = [];
-let ownCards = [];
-let friendCards = [];
-let busy = false;
-
-async function client() {
-  if (!clientPromise) {
-    clientPromise = import('https://esm.sh/@supabase/supabase-js@2').then(({ createClient }) =>
-      createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
-      })
-    );
-  }
-  return clientPromise;
-}
 async function signedInClient() {
-  const supabase = await client();
+  const supabase = await getSupabaseClient();
   const { data, error } = await supabase.auth.getUser();
   if (error && error.name !== 'AuthSessionMissingError') throw error;
   if (!data.user) throw new Error('Sign in with your CardBuddy account to trade virtual cards.');
