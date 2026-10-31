@@ -5,10 +5,18 @@ const INVENTORY_KEY = 'cardbuddy.virtual.v1';
 const $ = (id) => document.getElementById(id);
 async function signedInClient() {
   const supabase = await getSupabaseClient();
-  const { data, error } = await supabase.auth.getUser();
-  if (error && error.name !== 'AuthSessionMissingError') throw error;
-  if (!data.user) throw new Error('Sign in with your CardBuddy account to trade virtual cards.');
-  return { supabase, user: data.user };
+  // getSession reads the persisted browser session and waits for Supabase auth
+  // initialization. getUser alone can briefly return no user during app startup.
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+  let user = sessionData.session?.user || null;
+  if (!user) {
+    const { data, error } = await supabase.auth.getUser();
+    if (error && error.name !== 'AuthSessionMissingError') throw error;
+    user = data.user || null;
+  }
+  if (!user) throw new Error('CardBuddy could not find your saved sign-in session. Please open Friends, check that your account is signed in, then return to Trade Hub and refresh.');
+  return { supabase, user };
 }
 function readLocalState() {
   try { return JSON.parse(localStorage.getItem(INVENTORY_KEY) || '{}') || {}; }
