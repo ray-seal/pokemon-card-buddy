@@ -778,7 +778,10 @@ $('virtualTradeConfirm').addEventListener('click', completeNpcTrade);
 $('virtualTradeCancel').addEventListener('click', () => { pendingNpcTrade = null; $('virtualTradeReview').hidden = true; });
 
 $('virtualCloseRip').addEventListener('click', () => {
-  if (currentPack && !ripStarted) state.coins += currentPack.price;
+  if (currentPack && !ripStarted) {
+    if (currentPack.freeReward) state.freePacks += 1;
+    else state.coins += currentPack.price;
+  }
   currentPack = null; pendingCards = []; ripStarted = false;
   $('virtualCloseRip').hidden = false; $('virtualRipOverlay').hidden = true;
   save(); renderPacks();
